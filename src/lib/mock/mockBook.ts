@@ -42,7 +42,7 @@ export const mockDetailedReport: DetailedReport = {
 - 통신비를 알뜰 요금제로 전환하면 월 2만 원 절약 가능
 - 배달비를 주 2회 이하로 줄이면 월 15만 원 절약 가능`,
   grade: 'YELLOW',
-  surplus: { monthly: 1045000, daily: 34833 },
+  surplus: { monthly: 1045000, weekly: 243023, daily: 34833 },
   analysis: {
     wellDone: '적금과 연금저축을 꾸준히 하고 있어요.',
     improvement: '고정 소비 중 통신비를 줄일 수 있어요.',

@@ -1,26 +1,43 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a1a;
+  --sub-text: #6B7280;
+  --card-bg: #F5F5F5;
+  --card-border: #E5E7EB;
+  --grade-red: #EF4444;
+  --grade-red-bg: #FEF2F2;
+  --grade-yellow: #F59E0B;
+  --grade-yellow-bg: #FFFBEB;
+  --grade-green: #22C55E;
+  --grade-green-bg: #F0FDF4;
+  --kakao: #FEE500;
+  --primary: #F59E0B;
+  --btn-dark: #1a1a1a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-sub: var(--sub-text);
+  --color-card: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-grade-red: var(--grade-red);
+  --color-grade-red-bg: var(--grade-red-bg);
+  --color-grade-yellow: var(--grade-yellow);
+  --color-grade-yellow-bg: var(--grade-yellow-bg);
+  --color-grade-green: var(--grade-green);
+  --color-grade-green-bg: var(--grade-green-bg);
+  --color-kakao: var(--kakao);
+  --color-primary: var(--primary);
+  --color-btn-dark: var(--btn-dark);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
