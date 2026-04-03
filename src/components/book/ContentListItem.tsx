@@ -1,15 +1,18 @@
 'use client';
 
+import { memo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Download } from 'lucide-react';
 
 interface Props {
   id: string;
   date: string;
   title: string;
   summary: string;
+  showDownload?: boolean;
 }
 
-export default function ContentListItem({ id, date, title, summary }: Props) {
+function ContentListItem({ id, date, title, summary, showDownload }: Props) {
   const router = useRouter();
 
   const formatDate = (d: string) => {
@@ -18,15 +21,31 @@ export default function ContentListItem({ id, date, title, summary }: Props) {
   };
 
   return (
-    <div>
-      <p className="text-primary text-xs font-medium mb-2">{formatDate(date)}</p>
+    <div className="bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm">
+      <p className="text-xs text-sub mb-2">{formatDate(date)}</p>
       <button
         onClick={() => router.push(`/book/${id}`)}
-        className="w-full text-left bg-card rounded-2xl p-5"
+        className="w-full text-left"
       >
-        <p className="font-semibold mb-1">{title}</p>
-        <p className="text-sub text-sm leading-relaxed">{summary}</p>
+        <p className="font-semibold text-sm mb-1 text-foreground">{title}</p>
+        <p className="text-sub text-xs leading-relaxed">{summary}</p>
       </button>
+      {showDownload !== false && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+          <button
+            onClick={() => router.push(`/book/${id}`)}
+            className="flex-1 h-10 text-xs font-medium rounded-lg border border-border text-foreground hover:bg-surface transition-colors focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2"
+          >
+            보기
+          </button>
+          <button className="flex-1 h-10 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors flex items-center justify-center gap-1 focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2">
+            <Download size={12} />
+            다운로드
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+
+export default memo(ContentListItem);

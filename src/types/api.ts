@@ -6,7 +6,7 @@ export interface ApiResponse<T> {
 export interface ApiError {
   success: false;
   message: string;
-  code: 'BAD_REQUEST' | 'UNAUTHORIZED' | 'NOT_FOUND' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR';
+  code: 'BAD_REQUEST' | 'UNAUTHORIZED' | 'PAYMENT_REQUIRED' | 'NOT_FOUND' | 'VALIDATION_ERROR' | 'INTERNAL_ERROR';
 }
 
 export interface PaginationInfo {
@@ -36,6 +36,10 @@ export interface AuthResponse {
 }
 
 export interface Constants {
+  exchangeRate: number;
+  oilPrice: number;
+  inflationRate: number;
+  minPensionGoal: number;
   seoulAverageRent: number;
   categoryAverages: {
     food: number;
@@ -45,6 +49,5 @@ export interface Constants {
     leisure: number;
     etc: number;
   };
-  inflationRate: number;
   updatedAt: string;
 }

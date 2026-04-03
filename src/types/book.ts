@@ -1,10 +1,23 @@
-import type { Grade, Surplus } from './finance';
+import type { Grade } from './finance';
+
+// === Pacemaker ===
+
+export type SpendingLevel = 'green' | 'yellow' | 'red';
+
+export interface SpendingStatus {
+  todayRemaining: number;
+  weeklyRemaining: number;
+  weeklyUsed: number;
+  level: SpendingLevel;
+}
 
 export interface PacemakerAction {
-  type: 'learn_content' | 'detailed_report' | 'weekly_report';
   id: string;
+  type: 'learn_content' | 'detailed_report' | 'weekly_report';
+  contentId: string;
   title: string;
   label: string;
+  status: 'pending' | 'completed' | 'cancelled';
 }
 
 export interface PacemakerToday {
@@ -12,8 +25,11 @@ export interface PacemakerToday {
   date: string;
   message: string;
   grade: Grade;
-  dailySurplus: number;
+  dailyVariableCost: number;
+  spendingStatus: SpendingStatus;
   actions: PacemakerAction[];
+  disclaimer: string;
+  canRefresh: boolean;
   createdAt: string;
 }
 
@@ -24,16 +40,20 @@ export interface PacemakerHistoryItem {
   grade: Grade;
 }
 
+export type FeedbackType = 'inaccurate' | 'offensive' | 'other';
+
+// === Book: Detailed Reports ===
+
 export interface DetailedReportListItem {
   id: string;
   title: string;
   summary: string;
+  pdfUrl: string;
   createdAt: string;
 }
 
 export interface DetailedReportsResponse {
-  canGenerate: boolean;
-  nextAvailableDate: string | null;
+  canGenerateFree: boolean;
   items: DetailedReportListItem[];
 }
 
@@ -41,15 +61,13 @@ export interface DetailedReport {
   id: string;
   title: string;
   content: string;
-  grade: Grade;
-  surplus: Surplus;
-  analysis: {
-    wellDone: string;
-    improvement: string;
-    actionPlan: string;
-  };
+  pdfUrl: string;
   createdAt: string;
 }
+
+// === Book: Weekly Reports ===
+
+export type WeeklyFeeling = 'good' | 'okay' | 'tight' | 'bad';
 
 export interface WeeklyReportListItem {
   id: string;
@@ -65,12 +83,35 @@ export interface WeeklyReport {
   weekEnd: string;
   summary: string;
   guide: string;
+  weeklyStats: {
+    budgetComplianceRate: number;
+    biggestCategory: string;
+    savedCategory: string;
+  };
   userInput: {
-    overallFeeling: 'good' | 'okay' | 'tight' | 'bad';
+    overallFeeling: WeeklyFeeling;
     memo: string;
   };
   createdAt: string;
 }
+
+// === Book: External Scraps ===
+
+export type ScrapChannel = 'youtube' | 'threads' | 'instagram' | 'other';
+
+export interface ExternalScrap {
+  id: string;
+  url: string;
+  channel: ScrapChannel;
+  creator: string;
+  contentDate: string;
+  title: string;
+  aiSummary: string;
+  scrapCount: number;
+  createdAt: string;
+}
+
+// === Book: Learn ===
 
 export interface LearnContentListItem {
   id: string;
@@ -88,12 +129,4 @@ export interface LearnContent {
   grade: Grade;
   isRead: boolean;
   isScrapped: boolean;
-}
-
-export interface ScrapItem {
-  id: string;
-  title: string;
-  grade: Grade;
-  type: string;
-  scrappedAt: string;
 }

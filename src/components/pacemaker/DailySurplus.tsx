@@ -1,23 +1,25 @@
 'use client';
 
+import { memo } from 'react';
 import GradeBadge from '@/components/common/GradeBadge';
-import { formatWonRaw } from '@/lib/format';
 import type { Grade } from '@/types/finance';
 
 interface Props {
   grade: Grade;
-  dailySurplus: number;
+  date: string;
 }
 
-export default function DailySurplus({ grade, dailySurplus }: Props) {
+function DailySurplus({ grade, date }: Props) {
+  const d = new Date(date);
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const formatted = `${d.getMonth() + 1}/${d.getDate()} ${days[d.getDay()]}요일`;
+
   return (
-    <div className="text-center pt-2">
-      <div className="flex items-center justify-between px-1 mb-6">
-        <GradeBadge grade={grade} />
-        <span className="text-sub text-sm">마이</span>
-      </div>
-      <p className="text-sub text-sm mb-1">하루에 쓸 수 있는 돈</p>
-      <p className="text-3xl font-bold">{formatWonRaw(dailySurplus)}</p>
+    <div className="flex items-center justify-between">
+      <GradeBadge grade={grade} size="lg" />
+      <span className="text-sm text-sub">{formatted}</span>
     </div>
   );
 }
+
+export default memo(DailySurplus);

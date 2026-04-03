@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moneyrun-backend.onrender.com';
 
 class ApiClient {
   private token: string | null = null;
@@ -29,12 +29,7 @@ class ApiClient {
     const json = await res.json();
 
     if (!res.ok || !json.success) {
-      if (res.status === 401) {
-        this.clearToken();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
-      }
+      // 401은 호출부에서 처리 — 자동 리다이렉트 안 함
       throw new Error(json.message || 'API 요청 실패');
     }
 

@@ -3,41 +3,110 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #1a1a1a;
+  --foreground: #111827;
+  --surface: #F9FAFB;
   --sub-text: #6B7280;
-  --card-bg: #F5F5F5;
-  --card-border: #E5E7EB;
+  --placeholder: #9CA3AF;
+  --border: #E5E7EB;
+  --disabled: #D1D5DB;
+
+  /* 등급별 고정 컬러 (지출 신호등 등 고정 용도) */
   --grade-red: #EF4444;
   --grade-red-bg: #FEF2F2;
+  --grade-red-text: #991B1B;
   --grade-yellow: #F59E0B;
   --grade-yellow-bg: #FFFBEB;
+  --grade-yellow-text: #92400E;
   --grade-green: #22C55E;
   --grade-green-bg: #F0FDF4;
+  --grade-green-text: #166534;
+
+  /* 등급 적응형 — 비로그인 기본값 (검정) */
+  --grade-main: #111827;
+  --grade-light: #F9FAFB;
+  --grade-dark: #111827;
+
   --kakao: #FEE500;
-  --primary: #F59E0B;
-  --btn-dark: #1a1a1a;
+
+  /* 폰트 사이즈 */
+  --font-display: 32px;
+  --font-h1: 24px;
+  --font-h2: 20px;
+  --font-body-lg: 16px;
+  --font-body: 14px;
+  --font-caption: 12px;
+  --font-amount: 20px;
+  --font-amount-lg: 28px;
+
+  /* 라디우스 */
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
   --color-sub: var(--sub-text);
-  --color-card: var(--card-bg);
-  --color-card-border: var(--card-border);
+  --color-placeholder: var(--placeholder);
+  --color-border: var(--border);
+  --color-disabled: var(--disabled);
+
+  /* 고정 등급 컬러 */
   --color-grade-red: var(--grade-red);
   --color-grade-red-bg: var(--grade-red-bg);
+  --color-grade-red-text: var(--grade-red-text);
   --color-grade-yellow: var(--grade-yellow);
   --color-grade-yellow-bg: var(--grade-yellow-bg);
+  --color-grade-yellow-text: var(--grade-yellow-text);
   --color-grade-green: var(--grade-green);
   --color-grade-green-bg: var(--grade-green-bg);
+  --color-grade-green-text: var(--grade-green-text);
+
+  /* 등급 적응형 컬러 */
+  --color-accent: var(--grade-main);
+  --color-accent-light: var(--grade-light);
+  --color-accent-dark: var(--grade-dark);
+
   --color-kakao: var(--kakao);
-  --color-primary: var(--primary);
-  --color-btn-dark: var(--btn-dark);
   --font-sans: var(--font-geist-sans);
+
+  /* 커스텀 폰트 사이즈 (Tailwind text-* 유틸 확장) */
+  --font-size-2xs: 11px;
+  --font-size-caption: 13px;
+  --font-size-body-lg: 15px;
+  --font-size-display: 32px;
+  --font-size-amount-lg: 28px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* 전역 focus-visible 스타일 — 키보드 탐색 시 포커스 링 */
+:focus-visible {
+  outline: 2px solid var(--grade-main);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none; /* input은 ring 스타일로 대체 */
+}
+
+/* 모션 감소 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

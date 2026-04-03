@@ -12,22 +12,17 @@ export const mockUser: User = {
 
 export const mockFinanceProfile: FinanceProfile = {
   age: 27,
-  monthlyIncome: 2300000,
+  monthlyIncome: 2_300_000,
+  monthlyInvestment: 500_000,
+  monthlyFixedCost: 700_000,
+  expectedReturn: 5.0,
+  investmentYears: 38,
   grade: 'YELLOW',
-  goodSpendings: [
-    { id: 'gs-001', type: 'savings', label: '적금', amount: 300000 },
-    { id: 'gs-002', type: 'pension_savings', label: '연금저축', amount: 100000 },
-  ],
-  goodSpendingTotal: 400000,
-  fixedExpenses: {
-    rent: 700000,
-    utilities: 100000,
-    phone: 55000,
+  variableCost: {
+    monthly: 1_100_000,
+    weekly: 255_813,
+    daily: 36_666,
   },
-  fixedExpenseTotal: 855000,
-  surplus: {
-    monthly: 1045000,
-    weekly: 243023,
-    daily: 34833,
-  },
+  lastUpdated: '2026-04-02T00:00:00.000Z',
+  isStale: false,
 };

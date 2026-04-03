@@ -1,64 +1,50 @@
 'use client';
 
 import { create } from 'zustand';
-import type { Grade, GoodSpending, FixedExpenses, Surplus } from '@/types/finance';
-import { calculateSurplus, getGoodSpendingTotal } from '@/lib/surplus';
+import type { Grade, VariableCost } from '@/types/finance';
+import { calculateVariableCost } from '@/lib/variable-cost';
 import { calculateGrade } from '@/lib/grade';
 
 interface FinanceState {
   age: number;
   monthlyIncome: number;
-  goodSpendings: GoodSpending[];
-  fixedExpenses: FixedExpenses;
+  monthlyInvestment: number;
+  monthlyFixedCost: number;
+  expectedReturn: number;
+  investmentYears: number;
   grade: Grade;
-  surplus: Surplus;
+  variableCost: VariableCost;
+  isStale: boolean;
   setProfile: (profile: {
     age: number;
     monthlyIncome: number;
-    goodSpendings: GoodSpending[];
-    fixedExpenses: FixedExpenses;
+    monthlyInvestment: number;
+    monthlyFixedCost: number;
+    expectedReturn: number;
+    investmentYears: number;
     grade: Grade;
-    surplus: Surplus;
+    variableCost: VariableCost;
   }) => void;
-  updateAge: (age: number) => void;
-  updateIncome: (income: number) => void;
-  setGoodSpendings: (spendings: GoodSpending[]) => void;
-  setFixedExpenses: (expenses: FixedExpenses) => void;
   recalculate: () => void;
 }
 
 export const useFinanceStore = create<FinanceState>((set, get) => ({
   age: 0,
   monthlyIncome: 0,
-  goodSpendings: [],
-  fixedExpenses: { rent: 0, utilities: 0, phone: 0 },
+  monthlyInvestment: 0,
+  monthlyFixedCost: 0,
+  expectedReturn: 5,
+  investmentYears: 38,
   grade: 'RED' as Grade,
-  surplus: { monthly: 0, weekly: 0, daily: 0 },
+  variableCost: { monthly: 0, weekly: 0, daily: 0 },
+  isStale: false,
 
   setProfile: (profile) => set(profile),
 
-  updateAge: (age) => set({ age }),
-
-  updateIncome: (monthlyIncome) => {
-    set({ monthlyIncome });
-    get().recalculate();
-  },
-
-  setGoodSpendings: (goodSpendings) => {
-    set({ goodSpendings });
-    get().recalculate();
-  },
-
-  setFixedExpenses: (fixedExpenses) => {
-    set({ fixedExpenses });
-    get().recalculate();
-  },
-
   recalculate: () => {
-    const { monthlyIncome, goodSpendings, fixedExpenses } = get();
-    const surplus = calculateSurplus(monthlyIncome, goodSpendings, fixedExpenses);
-    const goodTotal = getGoodSpendingTotal(goodSpendings);
-    const grade = calculateGrade(monthlyIncome, goodTotal);
-    set({ surplus, grade });
+    const { monthlyIncome, monthlyInvestment, monthlyFixedCost } = get();
+    const variableCost = calculateVariableCost(monthlyIncome, monthlyInvestment, monthlyFixedCost);
+    const grade = calculateGrade(monthlyIncome, monthlyInvestment, variableCost.monthly);
+    set({ variableCost, grade });
   },
 }));

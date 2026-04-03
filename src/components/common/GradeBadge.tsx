@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Grade } from '@/types/finance';
 
 const config: Record<Grade, { bg: string; text: string; border: string }> = {
@@ -6,9 +7,12 @@ const config: Record<Grade, { bg: string; text: string; border: string }> = {
   GREEN: { bg: 'bg-grade-green-bg', text: 'text-grade-green', border: 'border-grade-green' },
 };
 
-export default function GradeBadge({ grade, size = 'md' }: { grade: Grade; size?: 'sm' | 'md' | 'lg' }) {
+function GradeBadge({ grade, size = 'md' }: { grade: Grade; size?: 'sm' | 'md' | 'lg' }) {
   const c = config[grade];
-  const sizeClass = size === 'sm' ? 'text-xs px-2 py-0.5' : size === 'lg' ? 'text-sm px-4 py-1.5' : 'text-xs px-3 py-1';
+  const sizeClass =
+    size === 'sm' ? 'text-xs px-2 py-0.5' :
+    size === 'lg' ? 'text-sm px-4 py-1.5' :
+    'text-xs px-3 py-1';
 
   return (
     <span className={`inline-flex items-center rounded-full border font-semibold ${c.bg} ${c.text} ${c.border} ${sizeClass}`}>
@@ -16,3 +20,5 @@ export default function GradeBadge({ grade, size = 'md' }: { grade: Grade; size?
     </span>
   );
 }
+
+export default memo(GradeBadge);

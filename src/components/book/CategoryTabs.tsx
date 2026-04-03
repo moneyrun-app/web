@@ -1,7 +1,7 @@
 'use client';
 
 const tabs = [
-  { key: 'detailed', label: '상세리포트' },
+  { key: 'detailed', label: 'AI리포트' },
   { key: 'weekly', label: '주간' },
   { key: 'scrap', label: '스크랩' },
   { key: 'learn', label: '학습' },
@@ -16,15 +16,17 @@ interface Props {
 
 export default function CategoryTabs({ active, onChange }: Props) {
   return (
-    <div className="flex border-b border-card-border">
+    <div role="tablist" className="flex border-b border-border">
       {tabs.map((tab) => (
         <button
           key={tab.key}
+          role="tab"
+          aria-selected={active === tab.key}
           onClick={() => onChange(tab.key)}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 px-1 text-sm font-medium transition-colors text-center ${
             active === tab.key
-              ? 'text-foreground border-b-2 border-foreground'
-              : 'text-sub'
+              ? 'text-accent-dark border-b-2 border-accent'
+              : 'text-sub hover:text-foreground'
           }`}
         >
           {tab.label}

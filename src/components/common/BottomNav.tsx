@@ -14,8 +14,8 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
-      <div className="max-w-md mx-auto flex justify-around items-center h-16 px-4">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex justify-around items-center h-14">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
           const Icon = tab.icon;
@@ -23,14 +23,13 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center justify-center flex-1 py-2 rounded-2xl transition-colors ${
-                isActive
-                  ? 'bg-primary/90 text-white mx-1'
-                  : 'text-gray-400'
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex flex-col items-center justify-center flex-1 py-2 transition-colors ${
+                isActive ? 'text-accent' : 'text-placeholder'
               }`}
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className={`text-[10px] mt-1 ${isActive ? 'font-semibold' : ''}`}>
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'font-semibold' : ''}`}>
                 {tab.label}
               </span>
             </Link>

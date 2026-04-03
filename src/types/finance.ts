@@ -1,21 +1,6 @@
 export type Grade = 'RED' | 'YELLOW' | 'GREEN';
 
-export type GoodSpendingType = 'savings' | 'investment' | 'pension_savings' | 'irp' | 'insurance';
-
-export interface GoodSpending {
-  id?: string;
-  type: GoodSpendingType;
-  label: string;
-  amount: number;
-}
-
-export interface FixedExpenses {
-  rent: number;
-  utilities: number;
-  phone: number;
-}
-
-export interface Surplus {
+export interface VariableCost {
   monthly: number;
   weekly: number;
   daily: number;
@@ -24,22 +9,55 @@ export interface Surplus {
 export interface FinanceProfile {
   age: number;
   monthlyIncome: number;
+  monthlyInvestment: number;
+  monthlyFixedCost: number;
+  expectedReturn: number;
+  investmentYears: number;
   grade: Grade;
-  goodSpendings: GoodSpending[];
-  goodSpendingTotal: number;
-  fixedExpenses: FixedExpenses;
-  fixedExpenseTotal: number;
-  surplus: Surplus;
+  variableCost: VariableCost;
+  lastUpdated: string;
+  isStale: boolean;
+}
+
+export interface SimulationInput {
+  age: number;
+  monthlyIncome: number;
+  monthlyInvestment: number;
+  monthlyFixedCost: number;
+  expectedReturn: number;
+  investmentYears: number;
+}
+
+export interface SimulationResult {
+  variableCost: VariableCost;
+  simulation: {
+    futureAsset: number;
+    monthlyPensionEstimate: number;
+    minLivingCost: number;
+    shortfall: number;
+    meetsGoal: boolean;
+  };
+  grade: Grade;
 }
 
 export interface OnboardingRequest {
   age: number;
   monthlyIncome: number;
-  goodSpendings: Omit<GoodSpending, 'id'>[];
-  fixedExpenses: FixedExpenses;
+  monthlyInvestment: number;
+  monthlyFixedCost: number;
+  expectedReturn: number;
+  investmentYears: number;
 }
 
 export interface OnboardingResponse {
   grade: Grade;
-  surplus: Surplus;
+  variableCost: VariableCost;
+  firstReportId: string;
+}
+
+export interface FinanceProfileUpdateResponse {
+  grade: Grade;
+  variableCost: VariableCost;
+  canGenerateFreeReport: boolean;
+  reportPrice: number;
 }

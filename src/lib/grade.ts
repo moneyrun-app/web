@@ -1,15 +1,21 @@
 import type { Grade } from '@/types/finance';
 
-export function calculateGrade(monthlyIncome: number, goodSpendingTotal: number): Grade {
-  if (goodSpendingTotal === 0) return 'RED';
-  const ratio = goodSpendingTotal / monthlyIncome;
-  if (ratio < 0.10) return 'RED';
-  if (ratio < 0.20) return 'YELLOW';
-  return 'GREEN';
+export function calculateGrade(
+  monthlyIncome: number,
+  monthlyInvestment: number,
+  monthlyVariableCost: number,
+): Grade {
+  if (monthlyIncome <= 0) return 'RED';
+  if (monthlyVariableCost < 0) return 'RED'; // 소득 초과 지출
+
+  const investRatio = monthlyInvestment / monthlyIncome;
+  if (investRatio >= 0.20) return 'GREEN';
+  if (investRatio >= 0.10) return 'YELLOW';
+  return 'RED';
 }
 
-export const gradeConfig: Record<Grade, { label: string; color: string; bg: string; border: string }> = {
-  RED: { label: 'RED', color: '#EF4444', bg: '#FEF2F2', border: '#EF4444' },
-  YELLOW: { label: 'YELLOW', color: '#F59E0B', bg: '#FFFBEB', border: '#F59E0B' },
-  GREEN: { label: 'GREEN', color: '#22C55E', bg: '#F0FDF4', border: '#22C55E' },
+export const gradeConfig: Record<Grade, { label: string; main: string; light: string; dark: string }> = {
+  RED:    { label: '위험', main: '#EF4444', light: '#FEF2F2', dark: '#991B1B' },
+  YELLOW: { label: '주의', main: '#F59E0B', light: '#FFFBEB', dark: '#92400E' },
+  GREEN:  { label: '양호', main: '#22C55E', light: '#F0FDF4', dark: '#166534' },
 };

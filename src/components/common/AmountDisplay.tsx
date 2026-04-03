@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { formatWonRaw } from '@/lib/format';
 
 interface AmountDisplayProps {
@@ -6,7 +7,7 @@ interface AmountDisplayProps {
   size?: 'md' | 'lg' | 'xl';
 }
 
-export default function AmountDisplay({ amount, label, size = 'lg' }: AmountDisplayProps) {
+function AmountDisplay({ amount, label, size = 'lg' }: AmountDisplayProps) {
   const sizeClass = size === 'xl' ? 'text-4xl' : size === 'lg' ? 'text-3xl' : 'text-xl';
 
   return (
@@ -16,3 +17,5 @@ export default function AmountDisplay({ amount, label, size = 'lg' }: AmountDisp
     </div>
   );
 }
+
+export default memo(AmountDisplay);
