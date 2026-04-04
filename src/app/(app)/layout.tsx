@@ -74,9 +74,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           isLoggedIn: true,
         });
 
-        // 3. 시뮬레이션 데이터가 있으면 온보딩 이관
+        // 3. 시뮬레이션 데이터 처리
         const simRaw = sessionStorage.getItem(SIM_STORAGE_KEY);
-        if (simRaw) {
+
+        if (!data.user.hasCompletedOnboarding && simRaw) {
+          // 신규 유저: 시뮬레이션 데이터로 온보딩
           try {
             const input = JSON.parse(simRaw);
             const onboardRes = await api.post<{
@@ -105,6 +107,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             sessionStorage.removeItem(SIM_STORAGE_KEY);
           } catch {
             // 온보딩 실패 시 재시도 가능하도록 세션 유지
+          }
+        } else if (data.user.hasCompletedOnboarding) {
+          // 기존 유저: DB 프로필 로드
+          try {
+            const profile = await api.get<{
+              age: number; monthlyIncome: number; monthlyInvestment: number;
+              monthlyFixedCost: number; expectedReturn: number; investmentYears: number;
+              grade: 'RED' | 'YELLOW' | 'GREEN';
+              variableCost: { monthly: number; weekly: number; daily: number };
+            }>('/finance/profile');
+
+            useFinanceStore.getState().setProfile(profile);
+
+            // 시뮬레이션 데이터가 있고 기존 DB 값과 다르면 업데이트 제안
+            if (simRaw) {
+              const input = JSON.parse(simRaw);
+              const isDifferent =
+                profile.monthlyIncome !== (input.monthlyIncome || 0) ||
+                profile.monthlyInvestment !== (input.monthlyInvestment || 0) ||
+                profile.monthlyFixedCost !== (input.monthlyFixedCost || 0) ||
+                profile.expectedReturn !== (input.expectedReturn || 0) ||
+                profile.investmentYears !== (input.investmentYears || 0);
+
+              sessionStorage.removeItem(SIM_STORAGE_KEY);
+
+              if (isDifferent) {
+                // 약간의 딜레이 후 알럿 (화면 렌더 후 표시)
+                setTimeout(() => {
+                  const wantUpdate = window.confirm(
+                    '방금 입력한 정보가 기존에 저장된 내 재무 정보와 달라요.\n마이페이지에서 업데이트하시겠어요?'
+                  );
+                  if (wantUpdate) {
+                    router.push('/my');
+                  }
+                }, 500);
+              }
+            }
+          } catch {
+            // 프로필 로드 실패
           }
         }
       } catch {
