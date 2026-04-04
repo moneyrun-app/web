@@ -1,5 +1,18 @@
 import type { Grade } from './finance';
 
+// === Weekly Review ===
+
+export type WeeklyReviewStatus = 'under' | 'on' | 'over';
+
+export interface WeeklyReview {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  status: WeeklyReviewStatus;
+  amount: number;
+  createdAt: string;
+}
+
 // === Pacemaker ===
 
 export type SpendingLevel = 'green' | 'yellow' | 'red';
@@ -23,13 +36,13 @@ export interface PacemakerAction {
 export interface PacemakerToday {
   id: string;
   date: string;
-  message: string;
+  messages: string[];
+  totalCount: number;
   grade: Grade;
   dailyVariableCost: number;
   spendingStatus: SpendingStatus;
   actions: PacemakerAction[];
   disclaimer: string;
-  canRefresh: boolean;
   createdAt: string;
 }
 

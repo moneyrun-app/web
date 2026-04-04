@@ -6,6 +6,8 @@ import type { Constants } from '@/types/api';
 import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse } from '@/types/finance';
 import type {
   PacemakerToday,
+  WeeklyReview,
+  WeeklyReviewStatus,
   DetailedReportsResponse,
   DetailedReport,
   WeeklyReportListItem,
@@ -64,16 +66,6 @@ export function usePacemakerToday() {
   });
 }
 
-export function useRefreshPacemaker() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.post<PacemakerToday>('/pacemaker/refresh'),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['pacemaker-today'] });
-    },
-  });
-}
-
 export function useCompleteAction() {
   const qc = useQueryClient();
   return useMutation({
@@ -89,6 +81,26 @@ export function useSendFeedback() {
   return useMutation({
     mutationFn: (body: { messageId: string; type: FeedbackType; content: string }) =>
       api.post('/pacemaker/feedback', body),
+  });
+}
+
+// === Weekly Review ===
+
+export function useWeeklyReviews() {
+  return useQuery({
+    queryKey: ['weekly-reviews'],
+    queryFn: () => api.get<WeeklyReview[]>('/pacemaker/weekly-reviews'),
+  });
+}
+
+export function useSubmitWeeklyReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { weekStart: string; weekEnd: string; status: WeeklyReviewStatus; amount: number }) =>
+      api.post<WeeklyReview>('/pacemaker/weekly-review', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['weekly-reviews'] });
+    },
   });
 }
 
