@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import BottomNav from '@/components/common/BottomNav';
 import SideNav from '@/components/common/SideNav';
 import GradeProvider from '@/components/common/GradeProvider';
@@ -20,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const grade = useFinanceStore((s) => s.grade);
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const initDone = useRef(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // 미로그인이면 랜딩으로
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (savedJwt) {
           api.setToken(savedJwt);
           syncUser(savedJwt);
+          setIsInitialized(true);
           return;
         }
 
@@ -51,7 +53,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ accessToken: kakaoToken }),
         });
 
-        if (!authRes.ok) return;
+        if (!authRes.ok) {
+          setIsInitialized(true);
+          return;
+        }
 
         const { data } = await authRes.json();
         const backendJwt = data.accessToken;
@@ -104,13 +109,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
       } catch {
         // 인증 초기화 실패 — 다음 접속 시 재시도
+      } finally {
+        setIsInitialized(true);
       }
     };
 
     init();
   }, [status, session?.accessToken]);
 
-  if (status === 'loading') {
+  if (status === 'loading' || (status === 'authenticated' && !isInitialized)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-border border-t-foreground rounded-full animate-spin" />
