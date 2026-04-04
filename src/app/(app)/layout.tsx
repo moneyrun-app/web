@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import BottomNav from '@/components/common/BottomNav';
 import SideNav from '@/components/common/SideNav';
 import GradeProvider from '@/components/common/GradeProvider';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useFinanceStore } from '@/store/financeStore';
 import { useUserStore } from '@/store/userStore';
 import { api } from '@/lib/api';
@@ -21,6 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useUserStore((s) => s.isLoggedIn);
   const initDone = useRef(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   // 미로그인이면 랜딩으로
   useEffect(() => {
@@ -133,15 +135,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               sessionStorage.removeItem(SIM_STORAGE_KEY);
 
               if (isDifferent) {
-                // 약간의 딜레이 후 알럿 (화면 렌더 후 표시)
-                setTimeout(() => {
-                  const wantUpdate = window.confirm(
-                    '방금 입력한 정보가 기존에 저장된 내 재무 정보와 달라요.\n마이페이지에서 업데이트하시겠어요?'
-                  );
-                  if (wantUpdate) {
-                    router.push('/my');
-                  }
-                }, 500);
+                setShowUpdateDialog(true);
               }
             }
           } catch {
@@ -175,6 +169,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
       <BottomNav />
+      <ConfirmDialog
+        open={showUpdateDialog}
+        title="재무 정보가 달라졌어요"
+        description="방금 입력한 내용이 기존에 저장된 정보와 달라요. 마이페이지에서 확인하고 업데이트하시겠어요?"
+        confirmText="업데이트하러 가기"
+        cancelText="괜찮아요"
+        onConfirm={() => {
+          setShowUpdateDialog(false);
+          router.push('/my');
+        }}
+        onCancel={() => setShowUpdateDialog(false)}
+      />
     </GradeProvider>
   );
 }
