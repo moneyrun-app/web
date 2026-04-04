@@ -51,10 +51,16 @@ export default function BookPage() {
                   <p className="text-sm font-semibold text-foreground mb-2">{item.title}</p>
                   <p className="text-caption text-sub leading-relaxed mb-3">{item.summary}</p>
                   <div className="flex gap-2">
-                    <button className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity">
+                    <button
+                      onClick={() => router.push(`/book/${item.id}`)}
+                      className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity"
+                    >
                       <FileText size={12} />상세보기
                     </button>
-                    <button className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors">
+                    <button
+                      onClick={() => window.open(`/api/proxy/book/detailed-reports/${item.id}/pdf`, '_blank')}
+                      className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors"
+                    >
                       <Download size={12} />PDF
                     </button>
                   </div>

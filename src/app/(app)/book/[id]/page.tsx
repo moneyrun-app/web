@@ -1,30 +1,59 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Bookmark, Download, FileText } from 'lucide-react';
-import { useState } from 'react';
-import { mockDetailedReport, mockWeeklyReport, mockLearnContent } from '@/lib/mock/mockBook';
+import { ArrowLeft, Bookmark, Download, Loader2 } from 'lucide-react';
+import { useDetailedReport, useWeeklyReport, useLearnContent, useToggleLearnScrap } from '@/hooks/useApi';
 
 export default function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [isScrapped, setIsScrapped] = useState(false);
 
   const isDetailed = id.startsWith('dr-');
   const isWeekly = id.startsWith('wr-');
   const isLearn = !isDetailed && !isWeekly;
 
+  const { data: detailed, isLoading: detailedLoading } = useDetailedReport(isDetailed ? id : '');
+  const { data: weekly, isLoading: weeklyLoading } = useWeeklyReport(isWeekly ? id : '');
+  const { data: learn, isLoading: learnLoading } = useLearnContent(isLearn ? id : '');
+  const toggleScrap = useToggleLearnScrap();
+
+  const isLoading = (isDetailed && detailedLoading) || (isWeekly && weeklyLoading) || (isLearn && learnLoading);
+  const data = isDetailed ? detailed : isWeekly ? weekly : learn;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 bg-surface rounded-lg animate-pulse" />
+        <div className="h-6 w-2/3 bg-surface rounded-lg animate-pulse" />
+        <div className="space-y-2 mt-6">
+          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-4 bg-surface rounded animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-sub mb-4">콘텐츠를 불러오지 못했어요</p>
+        <button onClick={() => router.back()} className="h-10 px-6 text-sm font-medium rounded-xl border border-border hover:bg-surface transition-colors">
+          돌아가기
+        </button>
+      </div>
+    );
+  }
+
   const title = isDetailed
-    ? mockDetailedReport.title
+    ? (detailed!).title
     : isWeekly
-      ? `${mockWeeklyReport.weekStart} ~ ${mockWeeklyReport.weekEnd}`
-      : mockLearnContent.title;
+      ? `${(weekly!).weekStart} ~ ${(weekly!).weekEnd}`
+      : (learn!).title;
 
   const content = isDetailed
-    ? mockDetailedReport.content
+    ? (detailed!).content
     : isWeekly
-      ? mockWeeklyReport.guide
-      : mockLearnContent.content;
+      ? (weekly!).guide
+      : (learn!).content;
 
   return (
     <div>
@@ -34,15 +63,27 @@ export default function BookDetailPage() {
           <ArrowLeft size={20} />
         </button>
         <div className="flex items-center gap-2">
-          {isDetailed && (
-            <button className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors">
+          {isDetailed && detailed?.pdfUrl && (
+            <button
+              onClick={() => window.open(`/api/proxy/book/detailed-reports/${id}/pdf`, '_blank')}
+              className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors"
+            >
               <Download size={12} />
               PDF
             </button>
           )}
-          {isLearn && (
-            <button onClick={() => setIsScrapped(!isScrapped)} aria-label={isScrapped ? '스크랩 해제' : '스크랩'} aria-pressed={isScrapped} className="p-1.5 rounded-lg hover:bg-surface transition-colors">
-              <Bookmark size={20} fill={isScrapped ? 'currentColor' : 'none'} className={isScrapped ? 'text-accent' : 'text-sub'} />
+          {isLearn && learn && (
+            <button
+              onClick={() => toggleScrap.mutate(id)}
+              disabled={toggleScrap.isPending}
+              aria-label={learn.isScrapped ? '스크랩 해제' : '스크랩'}
+              aria-pressed={learn.isScrapped}
+              className="p-1.5 rounded-lg hover:bg-surface transition-colors"
+            >
+              {toggleScrap.isPending
+                ? <Loader2 size={20} className="animate-spin text-sub" />
+                : <Bookmark size={20} fill={learn.isScrapped ? 'currentColor' : 'none'} className={learn.isScrapped ? 'text-accent' : 'text-sub'} />
+              }
             </button>
           )}
         </div>
@@ -52,19 +93,19 @@ export default function BookDetailPage() {
       <h1 className="text-xl md:text-2xl font-bold mb-2">{title}</h1>
 
       {/* Weekly stats */}
-      {isWeekly && mockWeeklyReport.weeklyStats && (
+      {isWeekly && weekly?.weeklyStats && (
         <div className="flex gap-3 mb-4">
           <div className="flex-1 bg-surface rounded-xl p-3">
             <p className="text-xs text-sub mb-0.5">예산 준수율</p>
-            <p className="text-lg font-bold">{Math.round(mockWeeklyReport.weeklyStats.budgetComplianceRate * 100)}%</p>
+            <p className="text-lg font-bold">{Math.round(weekly.weeklyStats.budgetComplianceRate * 100)}%</p>
           </div>
           <div className="flex-1 bg-surface rounded-xl p-3">
             <p className="text-xs text-sub mb-0.5">가장 큰 지출</p>
-            <p className="text-sm font-semibold">{mockWeeklyReport.weeklyStats.biggestCategory === 'food' ? '식비' : mockWeeklyReport.weeklyStats.biggestCategory}</p>
+            <p className="text-sm font-semibold">{weekly.weeklyStats.biggestCategory === 'food' ? '식비' : weekly.weeklyStats.biggestCategory}</p>
           </div>
           <div className="flex-1 bg-surface rounded-xl p-3">
             <p className="text-xs text-sub mb-0.5">가장 절약</p>
-            <p className="text-sm font-semibold">{mockWeeklyReport.weeklyStats.savedCategory === 'transport' ? '교통' : mockWeeklyReport.weeklyStats.savedCategory}</p>
+            <p className="text-sm font-semibold">{weekly.weeklyStats.savedCategory === 'transport' ? '교통' : weekly.weeklyStats.savedCategory}</p>
           </div>
         </div>
       )}
