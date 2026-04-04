@@ -1,4 +1,5 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moneyrun-backend.onrender.com';
+// 브라우저에서는 Next.js API 프록시를 통해 백엔드 호출 (CORS 우회)
+const BASE_URL = typeof window !== 'undefined' ? '/api/proxy' : (process.env.NEXT_PUBLIC_API_URL || 'https://moneyrun-backend.onrender.com');
 
 class ApiClient {
   private token: string | null = null;

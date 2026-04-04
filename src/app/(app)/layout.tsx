@@ -10,7 +10,7 @@ import { useFinanceStore } from '@/store/financeStore';
 import { useUserStore } from '@/store/userStore';
 import { api } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://moneyrun-backend.onrender.com';
+const API_URL = '/api/proxy';
 const SIM_STORAGE_KEY = 'moneyrun_simulation';
 const JWT_STORAGE_KEY = 'moneyrun_jwt';
 
