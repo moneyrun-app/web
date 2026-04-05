@@ -6,6 +6,9 @@ import type { Constants } from '@/types/api';
 import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse } from '@/types/finance';
 import type {
   PacemakerToday,
+  QuizAnswerResponse,
+  WrongNote,
+  WrongNoteRetryResponse,
   WeeklyReview,
   WeeklyReviewStatus,
   DetailedReportsResponse,
@@ -66,6 +69,13 @@ export function usePacemakerToday() {
   });
 }
 
+export function useAnswerQuiz() {
+  return useMutation({
+    mutationFn: ({ quizId, userAnswer }: { quizId: string; userAnswer: boolean }) =>
+      api.post<QuizAnswerResponse>(`/pacemaker/quiz/${quizId}/answer`, { userAnswer }),
+  });
+}
+
 export function useCompleteAction() {
   const qc = useQueryClient();
   return useMutation({
@@ -90,6 +100,26 @@ export function useWeeklyReviews() {
   return useQuery({
     queryKey: ['weekly-reviews'],
     queryFn: () => api.get<WeeklyReview[]>('/pacemaker/weekly-reviews'),
+  });
+}
+
+// === Wrong Notes (오답노트) ===
+
+export function useWrongNotes() {
+  return useQuery({
+    queryKey: ['wrong-notes'],
+    queryFn: () => api.get<WrongNote[]>('/book/wrong-notes'),
+  });
+}
+
+export function useRetryWrongNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, userAnswer }: { id: string; userAnswer: boolean }) =>
+      api.post<WrongNoteRetryResponse>(`/book/wrong-notes/${id}/retry`, { userAnswer }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wrong-notes'] });
+    },
   });
 }
 

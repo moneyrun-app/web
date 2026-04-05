@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Plus, Link2, X, Download, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import CategoryTabs, { type BookTab } from '@/components/book/CategoryTabs';
-import { useDetailedReports, useWeeklyReports, useScraps, useLearnContents, useCreateScrap } from '@/hooks/useApi';
+import { useDetailedReports, useWeeklyReports, useScraps, useLearnContents, useCreateScrap, useWrongNotes, useRetryWrongNote } from '@/hooks/useApi';
 
 export default function BookPage() {
   const router = useRouter();
@@ -14,9 +14,13 @@ export default function BookPage() {
 
   const { data: reports, isLoading: reportsLoading } = useDetailedReports();
   const { data: weeklyReports, isLoading: weeklyLoading } = useWeeklyReports();
+  const { data: wrongNotes, isLoading: wrongLoading } = useWrongNotes();
+  const retryWrongNote = useRetryWrongNote();
   const { data: scraps, isLoading: scrapsLoading } = useScraps();
   const { data: learnContents, isLoading: learnLoading } = useLearnContents();
   const createScrap = useCreateScrap();
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [retryResult, setRetryResult] = useState<{ id: string; correct: boolean; explanation: string } | null>(null);
 
   const handleScrap = () => {
     if (!scrapUrl) return;
@@ -85,6 +89,82 @@ export default function BookPage() {
               ))}
               {(weeklyReports ?? []).length === 0 && (
                 <p className="text-sub text-center py-12 col-span-full">다음 주부터 성과를 보여드릴게요</p>
+              )}
+            </div>
+          )
+        )}
+
+        {/* Wrong Notes (오답노트) */}
+        {tab === 'wrong' && (
+          wrongLoading ? <Skeleton /> : (
+            <div className="space-y-3">
+              {(wrongNotes ?? []).filter((n) => !n.isResolved).length === 0 && (
+                <p className="text-sub text-center py-12">틀린 문제가 없어요! 대단해요 👏</p>
+              )}
+              {(wrongNotes ?? []).filter((n) => !n.isResolved).map((note) => (
+                <div key={note.id} className="bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm">
+                  <p className="text-[10px] text-placeholder mb-1">{note.category} · {note.source}</p>
+                  <p className="text-sm font-medium text-foreground mb-3">{note.question}</p>
+
+                  {retryResult?.id === note.id ? (
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${retryResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
+                      <span>{retryResult.correct ? '✅' : '❌'}</span>
+                      <div>
+                        <p className={`text-xs font-semibold ${retryResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
+                          {retryResult.correct ? '정답! 복습 완료' : '다시 한번 생각해보세요'}
+                        </p>
+                        <p className="text-xs text-sub mt-0.5">{retryResult.explanation}</p>
+                      </div>
+                    </div>
+                  ) : retryingId === note.id ? (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          retryWrongNote.mutate({ id: note.id, userAnswer: true }, {
+                            onSuccess: (res) => setRetryResult({ id: note.id, correct: res.correct, explanation: res.explanation }),
+                          });
+                        }}
+                        disabled={retryWrongNote.isPending}
+                        className="flex-1 h-11 rounded-xl text-sm font-bold bg-grade-green-bg text-grade-green-text hover:bg-grade-green/20 transition-colors"
+                      >
+                        ⭕ O
+                      </button>
+                      <button
+                        onClick={() => {
+                          retryWrongNote.mutate({ id: note.id, userAnswer: false }, {
+                            onSuccess: (res) => setRetryResult({ id: note.id, correct: res.correct, explanation: res.explanation }),
+                          });
+                        }}
+                        disabled={retryWrongNote.isPending}
+                        className="flex-1 h-11 rounded-xl text-sm font-bold bg-grade-red-bg text-grade-red-text hover:bg-grade-red/20 transition-colors"
+                      >
+                        ❌ X
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-sub">정답: <span className="font-semibold">{note.correctAnswer ? 'O' : 'X'}</span></p>
+                      <button
+                        onClick={() => { setRetryingId(note.id); setRetryResult(null); }}
+                        className="h-9 px-4 text-xs font-medium rounded-lg bg-foreground text-white hover:opacity-90 transition-opacity"
+                      >
+                        다시 풀기
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* 복습 완료된 문제 */}
+              {(wrongNotes ?? []).filter((n) => n.isResolved).length > 0 && (
+                <div className="pt-4">
+                  <p className="text-xs text-placeholder mb-2">복습 완료</p>
+                  {(wrongNotes ?? []).filter((n) => n.isResolved).map((note) => (
+                    <div key={note.id} className="bg-surface rounded-xl p-3 mb-2">
+                      <p className="text-xs text-sub line-through">{note.question}</p>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )

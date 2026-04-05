@@ -33,17 +33,51 @@ export interface PacemakerAction {
   status: 'pending' | 'completed' | 'cancelled';
 }
 
+export interface Quiz {
+  id: string;
+  question: string;
+  answer: boolean;
+  explanation: string;
+  source: string;
+  category: string;
+}
+
 export interface PacemakerToday {
   id: string;
   date: string;
-  messages: string[];
-  totalCount: number;
+  message: string;
   grade: Grade;
   dailyVariableCost: number;
   spendingStatus: SpendingStatus;
+  quizzes: Quiz[];
+  quizCount: number;
   actions: PacemakerAction[];
   disclaimer: string;
   createdAt: string;
+}
+
+export interface QuizAnswerResponse {
+  correct: boolean;
+  explanation: string;
+  wrongNoteId?: string;
+}
+
+export interface WrongNote {
+  id: string;
+  quizId: string;
+  question: string;
+  correctAnswer: boolean;
+  explanation: string;
+  source: string;
+  category: string;
+  isResolved: boolean;
+  createdAt: string;
+}
+
+export interface WrongNoteRetryResponse {
+  correct: boolean;
+  isResolved: boolean;
+  explanation: string;
 }
 
 export interface PacemakerHistoryItem {

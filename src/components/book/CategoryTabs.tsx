@@ -3,6 +3,7 @@
 const tabs = [
   { key: 'detailed', label: 'AI리포트' },
   { key: 'weekly', label: '주간' },
+  { key: 'wrong', label: '오답노트' },
   { key: 'scrap', label: '스크랩' },
   { key: 'learn', label: '학습' },
 ] as const;

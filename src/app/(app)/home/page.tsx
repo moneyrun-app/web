@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useFinanceStore } from '@/store/financeStore';
-import { usePacemakerToday, useCompleteAction, useWeeklyReviews, useSubmitWeeklyReview } from '@/hooks/useApi';
+import { usePacemakerToday, useCompleteAction, useWeeklyReviews, useSubmitWeeklyReview, useAnswerQuiz } from '@/hooks/useApi';
 import { formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
 import WeeklyReviewModal from '@/components/pacemaker/WeeklyReviewModal';
-import { RefreshCw, MessageCircle } from 'lucide-react';
-import type { WeeklyReviewStatus } from '@/types/book';
+import { MessageCircle } from 'lucide-react';
+import type { WeeklyReviewStatus, Quiz } from '@/types/book';
 
 /** 월~일 기준 주차 계산 (마지막 주 ≤3일이면 이전 주에 합침) */
 function getMonthWeeks(now: Date) {
@@ -55,49 +55,30 @@ const trackColors: Record<WeeklyReviewStatus, { bg: string; fill: string }> = {
 };
 
 export default function HomePage() {
-  const { variableCost, grade } = useFinanceStore();
+  const { variableCost } = useFinanceStore();
   const { data: pm, isLoading, error } = usePacemakerToday();
   const { data: reviews } = useWeeklyReviews();
   const completeMutation = useCompleteAction();
   const submitReview = useSubmitWeeklyReview();
+  const answerQuiz = useAnswerQuiz();
 
   const [reviewWeek, setReviewWeek] = useState<{ start: Date; end: Date } | null>(null);
-  const [msgIndex, setMsgIndex] = useState(0);
-  const [msgFading, setMsgFading] = useState(false);
-
-  // 10초마다 자동 전환
-  useEffect(() => {
-    if (!pm) return;
-    const timer = setInterval(() => {
-      setMsgFading(true);
-      setTimeout(() => {
-        setMsgIndex((i) => i + 1);
-        setMsgFading(false);
-      }, 300);
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [pm]);
-
-  const nextMessage = () => {
-    setMsgFading(true);
-    setTimeout(() => {
-      setMsgIndex((i) => i + 1);
-      setMsgFading(false);
-    }, 300);
-  };
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
+  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
 
   const now = new Date();
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const isSunday = true; // TODO: 테스트 후 now.getDay() === 0 으로 복원
+  const isSunday = now.getDay() === 0;
   const weeks = getMonthWeeks(now);
 
-  // 주간 리뷰 매핑 (weekStart → review, 날짜 형식 정규화)
   const reviewMap = new Map<string, { status: WeeklyReviewStatus; amount: number }>();
   (reviews ?? []).forEach((r) => {
-    const key = r.weekStart.slice(0, 10); // "2026-03-30T..." → "2026-03-30"
+    const key = r.weekStart.slice(0, 10);
     reviewMap.set(key, { status: r.status, amount: r.amount });
   });
 
+  // 로딩 단계별 문구
   const loadingSteps = [
     '오늘의 메시지 준비 중...',
     'AI가 너한테 맞는 메시지 고르는 중...',
@@ -117,6 +98,29 @@ export default function HomePage() {
     ];
     return () => timers.forEach(clearTimeout);
   }, [isLoading]);
+
+  // 퀴즈 답변 처리
+  const handleQuizAnswer = (quiz: Quiz, userAnswer: boolean) => {
+    if (answeredIds.has(quiz.id)) return;
+    answerQuiz.mutate(
+      { quizId: quiz.id, userAnswer },
+      {
+        onSuccess: (res) => {
+          setQuizResult({ correct: res.correct, explanation: res.explanation });
+          setAnsweredIds((prev) => new Set(prev).add(quiz.id));
+        },
+      },
+    );
+  };
+
+  const nextQuiz = () => {
+    setQuizResult(null);
+    setQuizIndex((i) => i + 1);
+  };
+
+  const quizzes = pm?.quizzes ?? [];
+  const currentQuiz = quizzes[quizIndex];
+  const allDone = quizIndex >= quizzes.length;
 
   return (
     <div className="space-y-5 md:space-y-6">
@@ -145,7 +149,6 @@ export default function HomePage() {
           const startLabel = `${week.start.getMonth() + 1}/${week.start.getDate()}`;
           const endLabel = `${week.end.getMonth() + 1}/${week.end.getDate()}`;
 
-          // 트랙 배경색 결정
           const trackBg = review
             ? trackColors[review.status].fill
             : isPast ? 'bg-foreground/5' : isCurrent ? 'bg-grade-main/10' : '';
@@ -157,12 +160,10 @@ export default function HomePage() {
                 className={`relative h-7 bg-surface rounded-full overflow-hidden ${canReview ? 'cursor-pointer' : ''}`}
                 onClick={canReview ? () => setReviewWeek(week) : undefined}
               >
-                {/* 진행/리뷰 바 */}
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${trackBg}`}
                   style={{ width: review ? '100%' : `${progress}%` }}
                 />
-                {/* 일별 구분선 */}
                 {Array.from({ length: totalDays - 1 }, (_, d) => (
                   <div
                     key={d}
@@ -170,7 +171,6 @@ export default function HomePage() {
                     style={{ left: `${((d + 1) / totalDays) * 100}%` }}
                   />
                 ))}
-                {/* 현재 위치 */}
                 {isCurrent && !review && (
                   <div
                     className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-base leading-none drop-shadow-sm transition-all duration-500"
@@ -179,7 +179,6 @@ export default function HomePage() {
                     🏃‍➡️
                   </div>
                 )}
-                {/* 리뷰 가능 — 마지막 블럭 반짝이 */}
                 {canReview && (
                   <div
                     className="absolute inset-y-0 rounded-r-full animate-pulse bg-grade-yellow/40"
@@ -189,7 +188,6 @@ export default function HomePage() {
                     }}
                   />
                 )}
-                {/* 완주 마커 (리뷰 없는 과거 주) */}
                 {isPast && !review && (
                   <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -199,7 +197,6 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-              {/* 날짜 라벨 */}
               <div className="flex justify-between mt-0.5 px-0.5">
                 <span className="text-[10px] text-placeholder/60">{startLabel}</span>
                 <span className="text-[10px] text-placeholder/60">{endLabel}</span>
@@ -228,7 +225,7 @@ export default function HomePage() {
 
       {/* 페이스메이커 메시지 */}
       <div className="bg-grade-yellow-bg rounded-2xl p-5 md:p-7 space-y-3">
-        <p className="text-caption font-semibold text-grade-yellow-text">페이스메이커</p>
+        <p className="text-caption font-semibold text-grade-yellow-text">오늘의 한마디</p>
         {isLoading ? (
           <div className="flex items-center gap-3 py-2">
             <div className="w-5 h-5 border-2 border-grade-yellow border-t-transparent rounded-full animate-spin shrink-0" />
@@ -241,21 +238,74 @@ export default function HomePage() {
             메시지를 불러오지 못했어요 · 다시 시도
           </button>
         ) : (
-          <>
-            <p className={`text-body-lg md:text-base text-foreground leading-relaxed transition-opacity duration-300 ${msgFading ? 'opacity-0' : 'opacity-100'}`}>
-              {pm.messages[msgIndex % pm.messages.length]}
-            </p>
-            <button
-              onClick={nextMessage}
-              aria-label="다음 메시지"
-              className="inline-flex items-center gap-1 text-xs text-sub hover:text-foreground transition-colors"
-            >
-              <RefreshCw size={14} />
-              <span>다른 한마디</span>
-            </button>
-          </>
+          <p className="text-body-lg md:text-base text-foreground leading-relaxed">{pm.message}</p>
         )}
       </div>
+
+      {/* 오늘의 퀴즈 */}
+      {pm && quizzes.length > 0 && (
+        <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-foreground">오늘의 퀴즈</h3>
+            <span className="text-[10px] text-placeholder">{Math.min(quizIndex + 1, quizzes.length)} / {quizzes.length}</span>
+          </div>
+
+          {allDone ? (
+            <div className="text-center py-6">
+              <p className="text-2xl mb-2">🎉</p>
+              <p className="text-sm font-medium text-foreground">오늘 퀴즈 완료!</p>
+              <p className="text-xs text-sub mt-1">틀린 문제는 마이북 &gt; 오답노트에서 확인하세요</p>
+            </div>
+          ) : currentQuiz && (
+            <div>
+              {/* 문제 */}
+              <div className="bg-surface rounded-xl p-4 mb-4">
+                <p className="text-xs text-placeholder mb-1">{currentQuiz.category} · {currentQuiz.source}</p>
+                <p className="text-sm font-medium text-foreground leading-relaxed">{currentQuiz.question}</p>
+              </div>
+
+              {/* 결과 표시 */}
+              {quizResult ? (
+                <div className="space-y-3 animate-[fadeIn_300ms_ease-out]">
+                  <div className={`flex items-center gap-2 px-4 py-3 rounded-xl ${quizResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
+                    <span className="text-lg">{quizResult.correct ? '✅' : '❌'}</span>
+                    <div>
+                      <p className={`text-sm font-semibold ${quizResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
+                        {quizResult.correct ? '정답!' : '오답!'}
+                      </p>
+                      <p className="text-xs text-sub mt-0.5">{quizResult.explanation}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={nextQuiz}
+                    className="w-full h-11 rounded-xl text-sm font-medium bg-foreground text-white hover:opacity-90 transition-opacity"
+                  >
+                    다음 문제
+                  </button>
+                </div>
+              ) : (
+                /* O / X 버튼 */
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleQuizAnswer(currentQuiz, true)}
+                    disabled={answerQuiz.isPending}
+                    className="flex-1 h-14 rounded-xl text-xl font-bold bg-grade-green-bg text-grade-green-text hover:bg-grade-green/20 transition-colors disabled:opacity-50"
+                  >
+                    ⭕ O
+                  </button>
+                  <button
+                    onClick={() => handleQuizAnswer(currentQuiz, false)}
+                    disabled={answerQuiz.isPending}
+                    className="flex-1 h-14 rounded-xl text-xl font-bold bg-grade-red-bg text-grade-red-text hover:bg-grade-red/20 transition-colors disabled:opacity-50"
+                  >
+                    ❌ X
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 추천 행동 */}
       {pm && (pm.actions ?? []).length > 0 && (
