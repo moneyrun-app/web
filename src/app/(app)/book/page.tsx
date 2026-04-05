@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Plus, Link2, X, Download, FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import CategoryTabs, { type BookTab } from '@/components/book/CategoryTabs';
-import { useDetailedReports, useWeeklyReports, useScraps, useLearnContents, useCreateScrap, useWrongNotes, useRetryWrongNote } from '@/hooks/useApi';
+import { useDetailedReports, useMonthlyReports, useScraps, useCreateScrap, useWrongNotes } from '@/hooks/useApi';
 
 export default function BookPage() {
   const router = useRouter();
@@ -13,14 +13,11 @@ export default function BookPage() {
   const [scrapUrl, setScrapUrl] = useState('');
 
   const { data: reports, isLoading: reportsLoading } = useDetailedReports();
-  const { data: weeklyReports, isLoading: weeklyLoading } = useWeeklyReports();
+  const { data: monthlyReports, isLoading: monthlyLoading } = useMonthlyReports();
   const { data: wrongNotes, isLoading: wrongLoading } = useWrongNotes();
-  const retryWrongNote = useRetryWrongNote();
   const { data: scraps, isLoading: scrapsLoading } = useScraps();
-  const { data: learnContents, isLoading: learnLoading } = useLearnContents();
   const createScrap = useCreateScrap();
-  const [retryingId, setRetryingId] = useState<string | null>(null);
-  const [retryResult, setRetryResult] = useState<{ id: string; correct: boolean; explanation: string } | null>(null);
+  const [expandedNote, setExpandedNote] = useState<string | null>(null);
 
   const handleScrap = () => {
     if (!scrapUrl) return;
@@ -45,127 +42,93 @@ export default function BookPage() {
       <CategoryTabs active={tab} onChange={setTab} />
 
       <div className="py-4 space-y-4">
-        {/* AI Reports */}
+        {/* 시뮬레이터 분석 리포트 */}
         {tab === 'detailed' && (
-          reportsLoading ? <Skeleton /> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(reports?.items ?? []).map((item) => (
-                <div key={item.id} className="bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm">
-                  <p className="text-xs text-placeholder mb-1.5">{item.createdAt.split('T')[0].replace(/-/g, '.')}</p>
-                  <p className="text-sm font-semibold text-foreground mb-2">{item.title}</p>
-                  <p className="text-caption text-sub leading-relaxed mb-3">{item.summary}</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => router.push(`/book/${item.id}`)}
-                      className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity"
-                    >
-                      <FileText size={12} />상세보기
-                    </button>
-                    <button
-                      onClick={() => window.open(`/api/proxy/book/detailed-reports/${item.id}/pdf`, '_blank')}
-                      className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors"
-                    >
-                      <Download size={12} />PDF
-                    </button>
+          <>
+            {reportsLoading ? <Skeleton /> : (
+              <div className="space-y-4">
+                {(reports?.items ?? []).map((item) => (
+                  <div key={item.id} className="bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm">
+                    <p className="text-xs text-placeholder mb-1.5">{(item.analyzedAt || item.createdAt).split('T')[0].replace(/-/g, '.')} 분석</p>
+                    <p className="text-sm font-semibold text-foreground mb-2">{item.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-caption text-sub leading-relaxed truncate flex-1">{item.summary}</p>
+                      <button
+                        onClick={() => router.push(`/book/${item.id}?type=detailed`)}
+                        className="inline-flex items-center gap-1 h-9 px-3 text-xs font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity shrink-0"
+                      >
+                        <FileText size={12} />상세보기
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {(reports?.items ?? []).length === 0 && (
-                <p className="text-sub text-center py-12 col-span-full">아직 리포트가 없어요</p>
-              )}
-            </div>
-          )
-        )}
+                ))}
+                {(reports?.items ?? []).length === 0 && (
+                  <p className="text-sub text-center py-12">아직 리포트가 없어요</p>
+                )}
+              </div>
+            )}
 
-        {/* Weekly */}
-        {tab === 'weekly' && (
-          weeklyLoading ? <Skeleton /> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(weeklyReports ?? []).map((item) => (
-                <button key={item.id} onClick={() => router.push(`/book/${item.id}`)} className="w-full text-left bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm hover:border-accent transition-colors">
-                  <p className="text-xs text-placeholder mb-1.5">{item.weekStart} ~ {item.weekEnd}</p>
-                  <p className="text-sm font-semibold text-foreground mb-1">{item.summary}</p>
-                </button>
-              ))}
-              {(weeklyReports ?? []).length === 0 && (
-                <p className="text-sub text-center py-12 col-span-full">다음 주부터 성과를 보여드릴게요</p>
+            {/* 구분선 + 월간 리포트 */}
+            <div className="border-t border-border pt-4 mt-4">
+              <p className="text-sm font-semibold text-foreground mb-3">월간 리포트</p>
+              {monthlyLoading ? <Skeleton /> : (
+                <div className="space-y-3">
+                  {(monthlyReports ?? []).map((item) => (
+                    <button key={item.id} onClick={() => router.push(`/book/${item.id}?type=monthly`)} className="w-full text-left bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm hover:border-accent transition-colors">
+                      <p className="text-xs text-placeholder mb-1.5">{item.month}</p>
+                      <p className="text-sm font-semibold text-foreground mb-1">{item.summary}</p>
+                    </button>
+                  ))}
+                  {(monthlyReports ?? []).length === 0 && (
+                    <p className="text-sub text-center py-12">다음 달부터 월간 리포트를 보여드릴게요</p>
+                  )}
+                </div>
               )}
             </div>
-          )
+          </>
         )}
 
         {/* Wrong Notes (오답노트) */}
         {tab === 'wrong' && (
           wrongLoading ? <Skeleton /> : (
             <div className="space-y-3">
-              {(wrongNotes ?? []).filter((n) => !n.isResolved).length === 0 && (
-                <p className="text-sub text-center py-12">틀린 문제가 없어요! 대단해요 👏</p>
+              {(wrongNotes ?? []).length === 0 && (
+                <p className="text-sub text-center py-12">틀린 문제가 없어요!</p>
               )}
-              {(wrongNotes ?? []).filter((n) => !n.isResolved).map((note) => (
-                <div key={note.id} className="bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm">
+              {(wrongNotes ?? []).map((note) => (
+                <button
+                  key={note.id}
+                  onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)}
+                  className="w-full text-left bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm"
+                >
                   <p className="text-[10px] text-placeholder mb-1">{note.category} · {note.source}</p>
-                  <p className="text-sm font-medium text-foreground mb-3">{note.question}</p>
+                  <p className="text-sm font-medium text-foreground mb-2">{note.question}</p>
 
-                  {retryResult?.id === note.id ? (
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${retryResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
-                      <span>{retryResult.correct ? '✅' : '❌'}</span>
-                      <div>
-                        <p className={`text-xs font-semibold ${retryResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
-                          {retryResult.correct ? '정답! 복습 완료' : '다시 한번 생각해보세요'}
-                        </p>
-                        <p className="text-xs text-sub mt-0.5">{retryResult.explanation}</p>
-                      </div>
-                    </div>
-                  ) : retryingId === note.id ? (
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          retryWrongNote.mutate({ id: note.id, userAnswer: true }, {
-                            onSuccess: (res) => setRetryResult({ id: note.id, correct: res.correct, explanation: res.explanation }),
-                          });
-                        }}
-                        disabled={retryWrongNote.isPending}
-                        className="flex-1 h-11 rounded-xl text-sm font-bold bg-grade-green-bg text-grade-green-text hover:bg-grade-green/20 transition-colors"
-                      >
-                        ⭕ O
-                      </button>
-                      <button
-                        onClick={() => {
-                          retryWrongNote.mutate({ id: note.id, userAnswer: false }, {
-                            onSuccess: (res) => setRetryResult({ id: note.id, correct: res.correct, explanation: res.explanation }),
-                          });
-                        }}
-                        disabled={retryWrongNote.isPending}
-                        className="flex-1 h-11 rounded-xl text-sm font-bold bg-grade-red-bg text-grade-red-text hover:bg-grade-red/20 transition-colors"
-                      >
-                        ❌ X
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-sub">정답: <span className="font-semibold">{note.correctAnswer ? 'O' : 'X'}</span></p>
-                      <button
-                        onClick={() => { setRetryingId(note.id); setRetryResult(null); }}
-                        className="h-9 px-4 text-xs font-medium rounded-lg bg-foreground text-white hover:opacity-90 transition-opacity"
-                      >
-                        다시 풀기
-                      </button>
+                  <div className="flex gap-2 mb-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-grade-red-bg text-grade-red-text font-medium">
+                      내 답: {note.userAnswer !== undefined ? (note.userAnswer ? 'O' : 'X') : '—'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-grade-green-bg text-grade-green-text font-medium">
+                      정답: {note.correctAnswer ? 'O' : 'X'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-sub">{note.explanation}</p>
+
+                  {expandedNote === note.id && note.detailedExplanation && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-[10px] font-semibold text-foreground mb-1.5">상세 설명</p>
+                      {note.detailedExplanation.split('\n').map((line, i) => (
+                        line.trim() ? <p key={i} className="text-xs text-sub leading-relaxed mb-1">{line}</p> : <div key={i} className="h-1.5" />
+                      ))}
                     </div>
                   )}
-                </div>
-              ))}
 
-              {/* 복습 완료된 문제 */}
-              {(wrongNotes ?? []).filter((n) => n.isResolved).length > 0 && (
-                <div className="pt-4">
-                  <p className="text-xs text-placeholder mb-2">복습 완료</p>
-                  {(wrongNotes ?? []).filter((n) => n.isResolved).map((note) => (
-                    <div key={note.id} className="bg-surface rounded-xl p-3 mb-2">
-                      <p className="text-xs text-sub line-through">{note.question}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                  {note.detailedExplanation && (
+                    <p className="text-[10px] text-accent mt-2">{expandedNote === note.id ? '접기' : '자세히 보기'}</p>
+                  )}
+                </button>
+              ))}
             </div>
           )
         )}
@@ -194,37 +157,13 @@ export default function BookPage() {
           )
         )}
 
-        {/* Learn */}
-        {tab === 'learn' && (
-          learnLoading ? <Skeleton /> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(learnContents ?? []).map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => router.push(`/book/${item.id}`)}
-                  className={`w-full text-left rounded-2xl p-4 md:p-5 border transition-colors ${
-                    item.isRead ? 'bg-surface border-transparent' : 'bg-white border-border hover:border-accent shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className={`font-medium text-sm ${item.isRead ? 'text-sub' : 'text-foreground'}`}>{item.title}</p>
-                    <span className="text-xs text-placeholder ml-2">{item.readMinutes}분</span>
-                  </div>
-                </button>
-              ))}
-              {(learnContents ?? []).length === 0 && (
-                <p className="text-sub text-center py-12 col-span-full">아직 학습 콘텐츠가 없어요</p>
-              )}
-            </div>
-          )
-        )}
       </div>
 
       {/* FAB */}
       <button
         onClick={() => setShowScrapModal(true)}
         aria-label="URL 스크랩 추가"
-        className="fixed right-4 bottom-24 md:bottom-8 md:right-8 w-12 h-12 rounded-full bg-grade-yellow text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity z-30"
+        className="fixed right-4 bottom-24 md:bottom-8 md:right-8 w-12 h-12 rounded-full bg-foreground text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity z-30"
       >
         <Plus size={22} />
       </button>

@@ -17,11 +17,11 @@ interface SimulationState {
 
 const defaultInput: SimulationInput = {
   age: 0,
+  retirementAge: 0,
+  pensionStartAge: 65,
   monthlyIncome: 0,
-  monthlyInvestment: 0,
   monthlyFixedCost: 0,
-  expectedReturn: 0,
-  investmentYears: 0,
+  monthlyVariableCost: 0,
 };
 
 export const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -41,7 +41,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as SimulationInput;
-        set({ input: parsed, hasResult: true });
+        set({ input: { ...defaultInput, ...parsed }, hasResult: true });
       } catch {
         // ignore
       }

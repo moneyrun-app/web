@@ -1,17 +1,15 @@
 import type { Grade } from '@/types/finance';
 
-export function calculateGrade(
-  monthlyIncome: number,
-  monthlyInvestment: number,
-  monthlyVariableCost: number,
-): Grade {
+/**
+ * 등급 판정: 총지출/소득 비율
+ * 70% 이상 → RED, 50~70% → YELLOW, 50% 미만 → GREEN
+ */
+export function calculateGrade(monthlyIncome: number, monthlyExpense: number): Grade {
   if (monthlyIncome <= 0) return 'RED';
-  if (monthlyVariableCost < 0) return 'RED'; // 소득 초과 지출
-
-  const investRatio = monthlyInvestment / monthlyIncome;
-  if (investRatio >= 0.20) return 'GREEN';
-  if (investRatio >= 0.10) return 'YELLOW';
-  return 'RED';
+  const ratio = monthlyExpense / monthlyIncome;
+  if (ratio >= 0.7) return 'RED';
+  if (ratio >= 0.5) return 'YELLOW';
+  return 'GREEN';
 }
 
 export const gradeConfig: Record<Grade, { label: string; main: string; light: string; dark: string }> = {

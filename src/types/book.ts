@@ -1,16 +1,14 @@
 import type { Grade } from './finance';
 
-// === Weekly Review ===
+// === Daily Check ===
 
-export type WeeklyReviewStatus = 'under' | 'on' | 'over';
+export type DailyCheckStatus = 'green' | 'yellow' | 'red';
 
-export interface WeeklyReview {
+export interface DailyCheck {
   id: string;
-  weekStart: string;
-  weekEnd: string;
-  status: WeeklyReviewStatus;
+  date: string;
+  status: DailyCheckStatus;
   amount: number;
-  createdAt: string;
 }
 
 // === Pacemaker ===
@@ -66,18 +64,13 @@ export interface WrongNote {
   id: string;
   quizId: string;
   question: string;
+  userAnswer: boolean;
   correctAnswer: boolean;
   explanation: string;
+  detailedExplanation?: string;
   source: string;
   category: string;
-  isResolved: boolean;
   createdAt: string;
-}
-
-export interface WrongNoteRetryResponse {
-  correct: boolean;
-  isResolved: boolean;
-  explanation: string;
 }
 
 export interface PacemakerHistoryItem {
@@ -95,49 +88,134 @@ export interface DetailedReportListItem {
   id: string;
   title: string;
   summary: string;
-  pdfUrl: string;
+  analyzedAt: string;
   createdAt: string;
 }
 
 export interface DetailedReportsResponse {
-  canGenerateFree: boolean;
   items: DetailedReportListItem[];
+}
+
+// === Report Section Types ===
+
+export interface HeroCardData {
+  grade: string;
+  title: string;
+  subtitle: string;
+  dailyBudget: number;
+  monthlyBudget: number;
+}
+
+export interface SummaryTableData {
+  income: number;
+  fixedCost: number;
+  variableCost: number;
+  totalExpense: number;
+  surplus: number;
+  expenseRatio: number;
+  daysInMonth: number;
+}
+
+export interface DonutChartItem {
+  label: string;
+  value: number;
+  color: string;
+}
+
+export interface ComparisonCardItem {
+  label: string;
+  mine: number;
+  average: number;
+  diff: number;
+}
+
+export interface BarChartItem {
+  label: string;
+  current: number;
+  target: number;
+}
+
+export interface ProgressCardData {
+  current: string;
+  next: string;
+  currentRatio: number;
+  targetRatio: number;
+  amountToSave: number;
+  message: string;
+}
+
+export interface SimulationCase {
+  label: string;
+  rate: number;
+  asset55: number;
+  asset65: number;
+  monthlyPension: number;
+}
+
+export interface SimulationTableData {
+  investmentPeriod: number;
+  vestingPeriod: number;
+  monthlySaving: number;
+  cases: SimulationCase[];
+}
+
+export interface TipItem {
+  emoji: string;
+  text: string;
+}
+
+export interface ActionChecklistItem {
+  id: string;
+  text: string;
+  category: string;
+  savingEstimate: number;
+}
+
+export type ReportSection =
+  | { type: 'hero_card'; data: HeroCardData }
+  | { type: 'summary_table'; title: string; data: SummaryTableData }
+  | { type: 'donut_chart'; title: string; data: DonutChartItem[] }
+  | { type: 'comparison_card'; title: string; data: ComparisonCardItem[] }
+  | { type: 'bar_chart'; title: string; subtitle: string; data: BarChartItem[] }
+  | { type: 'progress_card'; title: string; data: ProgressCardData }
+  | { type: 'simulation_table'; title: string; subtitle: string; data: SimulationTableData }
+  | { type: 'tip_card'; title: string; items: TipItem[] }
+  | { type: 'action_checklist'; title: string; items: ActionChecklistItem[] }
+  | { type: 'disclaimer'; text: string };
+
+export interface DetailedReportContent {
+  sections: ReportSection[];
 }
 
 export interface DetailedReport {
   id: string;
   title: string;
-  content: string;
-  pdfUrl: string;
+  content: DetailedReportContent | string;
+  analyzedAt: string;
   createdAt: string;
 }
 
-// === Book: Weekly Reports ===
+// === Book: Monthly Reports ===
 
 export type WeeklyFeeling = 'good' | 'okay' | 'tight' | 'bad';
 
-export interface WeeklyReportListItem {
+export interface MonthlyReportListItem {
   id: string;
-  weekStart: string;
-  weekEnd: string;
+  month: string;
   summary: string;
   createdAt: string;
 }
 
-export interface WeeklyReport {
+export interface MonthlyReport {
   id: string;
-  weekStart: string;
-  weekEnd: string;
+  month: string;
   summary: string;
   guide: string;
-  weeklyStats: {
-    budgetComplianceRate: number;
-    biggestCategory: string;
-    savedCategory: string;
-  };
-  userInput: {
-    overallFeeling: WeeklyFeeling;
-    memo: string;
+  monthlyStats: {
+    greenDays: number;
+    yellowDays: number;
+    redDays: number;
+    totalCheckedDays: number;
   };
   createdAt: string;
 }

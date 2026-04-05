@@ -1,32 +1,75 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Bookmark, Download, Loader2 } from 'lucide-react';
-import { useDetailedReport, useWeeklyReport, useLearnContent, useToggleLearnScrap } from '@/hooks/useApi';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { useDetailedReport, useMonthlyReport } from '@/hooks/useApi';
+import {
+  HeroCard, MarkdownSection, SectionDivider, SummaryTable, DonutChart,
+  GaugeChart, ComparisonCard, StackedBar, SavingOpportunity, BarChartSection,
+  ProgressCard, SimulationTable, TipCard, ActionChecklist, LineChartSection,
+  ComparisonHighlight, CompoundEffect, WorldComparison, AgeRoadmap,
+  MacroIndicators, InflationImpact, GoalTracker, TaxBenefit,
+  InvestmentPyramid, PortfolioSuggestion, Disclaimer,
+} from '@/components/book/ReportSections';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function SectionRenderer({ section }: { section: any }) {
+  const s = section;
+  switch (s.type) {
+    case 'hero_card':          return <HeroCard data={s.data} />;
+    case 'markdown':           return <MarkdownSection content={s.content} />;
+    case 'section_divider':    return <SectionDivider title={s.title} subtitle={s.subtitle} />;
+    case 'summary_table':      return <SummaryTable title={s.title} data={s.data} />;
+    case 'donut_chart':        return <DonutChart title={s.title} data={s.data} />;
+    case 'gauge_chart':        return <GaugeChart title={s.title} data={s.data} />;
+    case 'comparison_card':    return <ComparisonCard title={s.title} data={s.data} />;
+    case 'stacked_bar':        return <StackedBar title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'saving_opportunity': return <SavingOpportunity title={s.title} items={s.items} totalSaving={s.totalSaving} message={s.message} />;
+    case 'bar_chart':          return <BarChartSection title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'progress_card':      return <ProgressCard title={s.title} data={s.data} />;
+    case 'simulation_table':   return <SimulationTable title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'tip_card':           return <TipCard title={s.title} items={s.items} />;
+    case 'action_checklist':   return <ActionChecklist title={s.title} items={s.items} />;
+    case 'line_chart':         return <LineChartSection title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'comparison_highlight': return <ComparisonHighlight title={s.title} data={s.data} />;
+    case 'compound_effect':    return <CompoundEffect title={s.title} data={s.data} message={s.message} />;
+    case 'world_comparison':   return <WorldComparison title={s.title} data={s.data} />;
+    case 'age_roadmap':        return <AgeRoadmap title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'macro_indicators':   return <MacroIndicators title={s.title} data={s.data} />;
+    case 'inflation_impact':   return <InflationImpact title={s.title} subtitle={s.subtitle} data={s.data} message={s.message} />;
+    case 'goal_tracker':       return <GoalTracker title={s.title} data={s.data} />;
+    case 'tax_benefit':        return <TaxBenefit title={s.title} items={s.items} />;
+    case 'investment_pyramid': return <InvestmentPyramid title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'portfolio_suggestion': return <PortfolioSuggestion title={s.title} subtitle={s.subtitle} data={s.data} />;
+    case 'disclaimer':         return <Disclaimer text={s.text} />;
+    default:                   return null;
+  }
+}
 
 export default function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type') ?? 'monthly';
 
-  const isDetailed = id.startsWith('dr-');
-  const isWeekly = id.startsWith('wr-');
-  const isLearn = !isDetailed && !isWeekly;
+  const isDetailed = type === 'detailed';
+  const isMonthly = type === 'monthly';
 
   const { data: detailed, isLoading: detailedLoading } = useDetailedReport(isDetailed ? id : '');
-  const { data: weekly, isLoading: weeklyLoading } = useWeeklyReport(isWeekly ? id : '');
-  const { data: learn, isLoading: learnLoading } = useLearnContent(isLearn ? id : '');
-  const toggleScrap = useToggleLearnScrap();
+  const { data: monthly, isLoading: monthlyLoading } = useMonthlyReport(isMonthly ? id : '');
 
-  const isLoading = (isDetailed && detailedLoading) || (isWeekly && weeklyLoading) || (isLearn && learnLoading);
-  const data = isDetailed ? detailed : isWeekly ? weekly : learn;
+  const isLoading = (isDetailed && detailedLoading) || (isMonthly && monthlyLoading);
+  const data = isDetailed ? detailed : monthly;
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="h-8 bg-surface rounded-lg animate-pulse" />
         <div className="h-6 w-2/3 bg-surface rounded-lg animate-pulse" />
-        <div className="space-y-2 mt-6">
-          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-4 bg-surface rounded animate-pulse" />)}
+        <div className="space-y-3 mt-6">
+          <div className="h-40 bg-surface rounded-2xl animate-pulse" />
+          <div className="h-32 bg-surface rounded-2xl animate-pulse" />
+          <div className="h-32 bg-surface rounded-2xl animate-pulse" />
         </div>
       </div>
     );
@@ -43,83 +86,90 @@ export default function BookDetailPage() {
     );
   }
 
-  const title = isDetailed
-    ? (detailed!).title
-    : isWeekly
-      ? `${(weekly!).weekStart} ~ ${(weekly!).weekEnd}`
-      : (learn!).title;
+  // === Detailed Report (섹션 기반 or 마크다운 폴백) ===
+  if (isDetailed && detailed) {
+    const rawContent = detailed.content;
+    // 백엔드가 JSON 문자열로 내려주면 파싱, 이미 객체면 그대로
+    const parsed = typeof rawContent === 'string'
+      ? (() => { try { return JSON.parse(rawContent); } catch { return null; } })()
+      : rawContent;
+    const isLegacy = !parsed || !parsed.sections;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sections: any[] = isLegacy ? [] : parsed.sections;
 
-  const content = isDetailed
-    ? (detailed!).content
-    : isWeekly
-      ? (weekly!).guide
-      : (learn!).content;
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => router.back()} aria-label="돌아가기" className="p-1.5 -ml-1.5 rounded-lg hover:bg-surface transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+        </div>
+        <p className="text-xs text-placeholder mb-1">
+          {(detailed.analyzedAt || detailed.createdAt).split('T')[0].replace(/-/g, '.')} 분석
+        </p>
+        <h1 className="text-xl md:text-2xl font-bold mb-4">{detailed.title}</h1>
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => router.back()} aria-label="돌아가기" className="p-1.5 -ml-1.5 rounded-lg hover:bg-surface transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex items-center gap-2">
-          {isDetailed && detailed?.pdfUrl && (
-            <button
-              onClick={() => window.open(`/api/proxy/book/detailed-reports/${id}/pdf`, '_blank')}
-              className="inline-flex items-center gap-1 h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors"
-            >
-              <Download size={12} />
-              PDF
-            </button>
-          )}
-          {isLearn && learn && (
-            <button
-              onClick={() => toggleScrap.mutate(id)}
-              disabled={toggleScrap.isPending}
-              aria-label={learn.isScrapped ? '스크랩 해제' : '스크랩'}
-              aria-pressed={learn.isScrapped}
-              className="p-1.5 rounded-lg hover:bg-surface transition-colors"
-            >
-              {toggleScrap.isPending
-                ? <Loader2 size={20} className="animate-spin text-sub" />
-                : <Bookmark size={20} fill={learn.isScrapped ? 'currentColor' : 'none'} className={learn.isScrapped ? 'text-accent' : 'text-sub'} />
-              }
-            </button>
-          )}
+        {isLegacy ? (
+          /* 백엔드가 아직 문자열로 내려줄 때 마크다운 폴백 */
+          <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 pb-8">
+            {String(rawContent).split('\n').map((line, i) => {
+              if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>;
+              if (line.startsWith('### ')) return <h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>;
+              if (line.startsWith('- ')) return <li key={i} className="text-sm ml-4 mb-1">{line.replace('- ', '')}</li>;
+              if (line.trim() === '') return <br key={i} />;
+              return <p key={i} className="text-sm leading-relaxed mb-2">{line}</p>;
+            })}
+          </div>
+        ) : (
+          /* 섹션 기반 렌더링 */
+          <div className="space-y-4 pb-8">
+            {sections.map((section, i) => (
+              <SectionRenderer key={i} section={section} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // === Monthly Report (마크다운 기반) ===
+  if (isMonthly && monthly) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => router.back()} aria-label="돌아가기" className="p-1.5 -ml-1.5 rounded-lg hover:bg-surface transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+        </div>
+        <h1 className="text-xl md:text-2xl font-bold mb-2">{monthly.month} 월간 리포트</h1>
+        {monthly.monthlyStats && (
+          <div className="flex gap-3 mb-4">
+            <div className="flex-1 bg-grade-green-bg rounded-xl p-3 text-center">
+              <p className="text-xs text-sub mb-0.5">절약</p>
+              <p className="text-lg font-bold text-grade-green-text">{monthly.monthlyStats.greenDays}일</p>
+            </div>
+            <div className="flex-1 bg-grade-yellow-bg rounded-xl p-3 text-center">
+              <p className="text-xs text-sub mb-0.5">보통</p>
+              <p className="text-lg font-bold text-grade-yellow-text">{monthly.monthlyStats.yellowDays}일</p>
+            </div>
+            <div className="flex-1 bg-grade-red-bg rounded-xl p-3 text-center">
+              <p className="text-xs text-sub mb-0.5">과소비</p>
+              <p className="text-lg font-bold text-grade-red-text">{monthly.monthlyStats.redDays}일</p>
+            </div>
+          </div>
+        )}
+        <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 pb-8">
+          {monthly.guide.split('\n').map((line, i) => {
+            if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>;
+            if (line.startsWith('### ')) return <h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>;
+            if (line.startsWith('- ')) return <li key={i} className="text-sm ml-4 mb-1">{line.replace('- ', '')}</li>;
+            if (line.trim() === '') return <br key={i} />;
+            return <p key={i} className="text-sm leading-relaxed mb-2">{line}</p>;
+          })}
         </div>
       </div>
+    );
+  }
 
-      {/* Title */}
-      <h1 className="text-xl md:text-2xl font-bold mb-2">{title}</h1>
-
-      {/* Weekly stats */}
-      {isWeekly && weekly?.weeklyStats && (
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1 bg-surface rounded-xl p-3">
-            <p className="text-xs text-sub mb-0.5">예산 준수율</p>
-            <p className="text-lg font-bold">{Math.round(weekly.weeklyStats.budgetComplianceRate * 100)}%</p>
-          </div>
-          <div className="flex-1 bg-surface rounded-xl p-3">
-            <p className="text-xs text-sub mb-0.5">가장 큰 지출</p>
-            <p className="text-sm font-semibold">{weekly.weeklyStats.biggestCategory === 'food' ? '식비' : weekly.weeklyStats.biggestCategory}</p>
-          </div>
-          <div className="flex-1 bg-surface rounded-xl p-3">
-            <p className="text-xs text-sub mb-0.5">가장 절약</p>
-            <p className="text-sm font-semibold">{weekly.weeklyStats.savedCategory === 'transport' ? '교통' : weekly.weeklyStats.savedCategory}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Markdown Content */}
-      <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 pb-8">
-        {content.split('\n').map((line, i) => {
-          if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>;
-          if (line.startsWith('### ')) return <h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>;
-          if (line.startsWith('- ')) return <li key={i} className="text-sm ml-4 mb-1">{line.replace('- ', '')}</li>;
-          if (line.trim() === '') return <br key={i} />;
-          return <p key={i} className="text-sm leading-relaxed mb-2">{line}</p>;
-        })}
-      </div>
-    </div>
-  );
+  return null;
 }

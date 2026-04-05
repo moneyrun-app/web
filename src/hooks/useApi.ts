@@ -3,18 +3,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { Constants } from '@/types/api';
-import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse } from '@/types/finance';
+import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse, OnboardingRequest, OnboardingResponse } from '@/types/finance';
 import type {
   PacemakerToday,
   QuizAnswerResponse,
   WrongNote,
-  WrongNoteRetryResponse,
-  WeeklyReview,
-  WeeklyReviewStatus,
+  DailyCheck,
+  DailyCheckStatus,
   DetailedReportsResponse,
   DetailedReport,
-  WeeklyReportListItem,
-  WeeklyReport,
+  MonthlyReportListItem,
+  MonthlyReport,
   ExternalScrap,
   LearnContentListItem,
   LearnContent,
@@ -52,7 +51,7 @@ export function useFinanceProfile() {
 export function useUpdateFinanceProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<SimulationInput>) =>
+    mutationFn: (body: Partial<SimulationInput> & { nickname?: string }) =>
       api.patch<FinanceProfileUpdateResponse>('/finance/profile', body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['finance-profile'] });
@@ -94,12 +93,23 @@ export function useSendFeedback() {
   });
 }
 
-// === Weekly Review ===
+// === Daily Checks ===
 
-export function useWeeklyReviews() {
+export function useDailyChecks(month: string) {
   return useQuery({
-    queryKey: ['weekly-reviews'],
-    queryFn: () => api.get<WeeklyReview[]>('/pacemaker/weekly-reviews'),
+    queryKey: ['daily-checks', month],
+    queryFn: () => api.get<DailyCheck[]>(`/pacemaker/daily-checks?month=${month}`),
+  });
+}
+
+export function useSubmitDailyCheck() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { date: string; status: DailyCheckStatus; amount: number }) =>
+      api.post<DailyCheck>('/pacemaker/daily-check', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['daily-checks'] });
+    },
   });
 }
 
@@ -112,27 +122,6 @@ export function useWrongNotes() {
   });
 }
 
-export function useRetryWrongNote() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, userAnswer }: { id: string; userAnswer: boolean }) =>
-      api.post<WrongNoteRetryResponse>(`/book/wrong-notes/${id}/retry`, { userAnswer }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['wrong-notes'] });
-    },
-  });
-}
-
-export function useSubmitWeeklyReview() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { weekStart: string; weekEnd: string; status: WeeklyReviewStatus; amount: number }) =>
-      api.post<WeeklyReview>('/pacemaker/weekly-review', body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-reviews'] });
-    },
-  });
-}
 
 // === Book: Detailed Reports ===
 
@@ -151,31 +140,20 @@ export function useDetailedReport(id: string) {
   });
 }
 
-// === Book: Weekly Reports ===
+// === Book: Monthly Reports ===
 
-export function useWeeklyReports() {
+export function useMonthlyReports() {
   return useQuery({
-    queryKey: ['weekly-reports'],
-    queryFn: () => api.get<WeeklyReportListItem[]>('/book/weekly-reports'),
+    queryKey: ['monthly-reports'],
+    queryFn: () => api.get<MonthlyReportListItem[]>('/book/monthly-reports'),
   });
 }
 
-export function useWeeklyReport(id: string) {
+export function useMonthlyReport(id: string) {
   return useQuery({
-    queryKey: ['weekly-report', id],
-    queryFn: () => api.get<WeeklyReport>(`/book/weekly-reports/${id}`),
+    queryKey: ['monthly-report', id],
+    queryFn: () => api.get<MonthlyReport>(`/book/monthly-reports/${id}`),
     enabled: !!id,
-  });
-}
-
-export function useCreateWeeklyReport() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { weekStatus: { overallFeeling: string; memo: string } }) =>
-      api.post<WeeklyReport>('/book/weekly-reports', body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-reports'] });
-    },
   });
 }
 

@@ -2,49 +2,38 @@
 
 import { create } from 'zustand';
 import type { Grade, VariableCost } from '@/types/finance';
-import { calculateVariableCost } from '@/lib/variable-cost';
-import { calculateGrade } from '@/lib/grade';
 
 interface FinanceState {
+  nickname: string;
   age: number;
+  retirementAge: number;
+  pensionStartAge: number;
   monthlyIncome: number;
-  monthlyInvestment: number;
   monthlyFixedCost: number;
-  expectedReturn: number;
-  investmentYears: number;
+  monthlyVariableCost: number;
+  monthlyExpense: number;
+  surplus: number;
+  investmentPeriod: number;
+  vestingPeriod: number;
   grade: Grade;
   variableCost: VariableCost;
-  isStale: boolean;
-  setProfile: (profile: {
-    age: number;
-    monthlyIncome: number;
-    monthlyInvestment: number;
-    monthlyFixedCost: number;
-    expectedReturn: number;
-    investmentYears: number;
-    grade: Grade;
-    variableCost: VariableCost;
-  }) => void;
-  recalculate: () => void;
+  setProfile: (profile: Partial<FinanceState>) => void;
 }
 
-export const useFinanceStore = create<FinanceState>((set, get) => ({
+export const useFinanceStore = create<FinanceState>((set) => ({
+  nickname: '',
   age: 0,
+  retirementAge: 0,
+  pensionStartAge: 65,
   monthlyIncome: 0,
-  monthlyInvestment: 0,
   monthlyFixedCost: 0,
-  expectedReturn: 5,
-  investmentYears: 38,
+  monthlyVariableCost: 0,
+  monthlyExpense: 0,
+  surplus: 0,
+  investmentPeriod: 0,
+  vestingPeriod: 0,
   grade: 'RED' as Grade,
-  variableCost: { monthly: 0, weekly: 0, daily: 0 },
-  isStale: false,
+  variableCost: { monthly: 0, weekly: 0, daily: 0, daysInMonth: 30 },
 
   setProfile: (profile) => set(profile),
-
-  recalculate: () => {
-    const { monthlyIncome, monthlyInvestment, monthlyFixedCost } = get();
-    const variableCost = calculateVariableCost(monthlyIncome, monthlyInvestment, monthlyFixedCost);
-    const grade = calculateGrade(monthlyIncome, monthlyInvestment, variableCost.monthly);
-    set({ variableCost, grade });
-  },
 }));

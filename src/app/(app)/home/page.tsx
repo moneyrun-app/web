@@ -2,81 +2,63 @@
 
 import { useState, useEffect } from 'react';
 import { useFinanceStore } from '@/store/financeStore';
-import { usePacemakerToday, useCompleteAction, useWeeklyReviews, useSubmitWeeklyReview, useAnswerQuiz } from '@/hooks/useApi';
+import { usePacemakerToday, useCompleteAction, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz } from '@/hooks/useApi';
 import { formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
-import WeeklyReviewModal from '@/components/pacemaker/WeeklyReviewModal';
-import { MessageCircle } from 'lucide-react';
-import type { WeeklyReviewStatus, Quiz } from '@/types/book';
+import type { DailyCheckStatus, Quiz } from '@/types/book';
 
-/** 월~일 기준 주차 계산 (마지막 주 ≤3일이면 이전 주에 합침) */
+/** 7일씩 나누기: 1~7, 8~14, ..., 마지막 주는 남은 일수 */
 function getMonthWeeks(now: Date) {
   const year = now.getFullYear();
   const month = now.getMonth();
-  const firstOfMonth = new Date(year, month, 1);
-  const lastOfMonth = new Date(year, month + 1, 0);
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const weeks: { start: number; end: number }[] = [];
 
-  const dow = firstOfMonth.getDay();
-  const daysBack = dow === 0 ? 6 : dow - 1;
-  const firstMonday = new Date(year, month, 1 - daysBack);
-
-  const weeks: { start: Date; end: Date }[] = [];
-  const cursor = new Date(firstMonday);
-
-  while (cursor <= lastOfMonth) {
-    const sunday = new Date(cursor);
-    sunday.setDate(sunday.getDate() + 6);
-    weeks.push({ start: new Date(cursor), end: new Date(sunday) });
-    cursor.setDate(cursor.getDate() + 7);
+  let day = 1;
+  while (day <= lastDay) {
+    const end = Math.min(day + 6, lastDay);
+    weeks.push({ start: day, end });
+    day = end + 1;
   }
+  return { weeks, year, month, lastDay };
+}
 
-  if (weeks.length > 1) {
-    const last = weeks[weeks.length - 1];
-    const startInMonth = last.start < firstOfMonth ? firstOfMonth : last.start;
-    const endInMonth = last.end > lastOfMonth ? lastOfMonth : last.end;
-    const daysInMonth = Math.round((endInMonth.getTime() - startInMonth.getTime()) / 86400000) + 1;
-    if (daysInMonth <= 3) {
-      weeks[weeks.length - 2].end = last.end;
-      weeks.pop();
-    }
-  }
-
-  return weeks;
+function formatCheonWon(n: number): string {
+  const man = Math.floor(n / 10);
+  const cheon = n % 10;
+  if (man > 0 && cheon > 0) return `${man}만 ${cheon}천원`;
+  if (man > 0) return `${man}만원`;
+  return `${cheon}천원`;
 }
 
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const trackColors: Record<WeeklyReviewStatus, { bg: string; fill: string }> = {
-  under: { bg: 'bg-grade-green/20', fill: 'bg-grade-green/30' },
-  on: { bg: 'bg-grade-yellow/20', fill: 'bg-grade-yellow/30' },
-  over: { bg: 'bg-grade-red/20', fill: 'bg-grade-red/30' },
-};
-
 export default function HomePage() {
   const { variableCost } = useFinanceStore();
   const { data: pm, isLoading, error } = usePacemakerToday();
-  const { data: reviews } = useWeeklyReviews();
   const completeMutation = useCompleteAction();
-  const submitReview = useSubmitWeeklyReview();
   const answerQuiz = useAnswerQuiz();
 
-  const [reviewWeek, setReviewWeek] = useState<{ start: Date; end: Date } | null>(null);
+  const [checkDate, setCheckDate] = useState<number | null>(null);
+  const [checkStatus, setCheckStatus] = useState<DailyCheckStatus | null>(null);
+  const [checkAmount, setCheckAmount] = useState('');
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
   const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
+  const [hoverDay, setHoverDay] = useState<number | null>(null);
 
   const now = new Date();
-  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const isSunday = now.getDay() === 0;
-  const weeks = getMonthWeeks(now);
+  const today = now.getDate();
+  const { weeks, year, month } = getMonthWeeks(now);
 
-  const reviewMap = new Map<string, { status: WeeklyReviewStatus; amount: number }>();
-  (reviews ?? []).forEach((r) => {
-    const key = r.weekStart.slice(0, 10);
-    reviewMap.set(key, { status: r.status, amount: r.amount });
-  });
+  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const { data: dailyChecks } = useDailyChecks(monthStr);
+  const submitCheck = useSubmitDailyCheck();
+
+  const checkMap = new Map<string, { status: DailyCheckStatus; amount: number }>();
+  (dailyChecks ?? []).forEach((c) => checkMap.set(c.date.slice(0, 10), { status: c.status, amount: c.amount }));
 
   // 로딩 단계별 문구
   const loadingSteps = [
@@ -124,108 +106,12 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 md:space-y-6">
-      {/* Header */}
-      {pm && (
-        <div className="flex items-center gap-2">
-          <GradeBadge grade={pm.grade} />
-        </div>
-      )}
-
-      {/* Track */}
-      <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
-        {weeks.map((week, i) => {
-          const totalDays = Math.round((week.end.getTime() - week.start.getTime()) / 86400000) + 1;
-          const isCurrent = todayDate >= week.start && todayDate <= week.end;
-          const isPast = todayDate > week.end;
-          const daysSinceStart = Math.round((todayDate.getTime() - week.start.getTime()) / 86400000);
-          const progress = isCurrent
-            ? ((daysSinceStart + 1) / totalDays) * 100
-            : isPast ? 100 : 0;
-
-          const weekKey = toDateStr(week.start);
-          const review = reviewMap.get(weekKey);
-          const canReview = isCurrent && isSunday && !review;
-
-          const startLabel = `${week.start.getMonth() + 1}/${week.start.getDate()}`;
-          const endLabel = `${week.end.getMonth() + 1}/${week.end.getDate()}`;
-
-          const trackBg = review
-            ? trackColors[review.status].fill
-            : isPast ? 'bg-foreground/5' : isCurrent ? 'bg-grade-main/10' : '';
-
-          return (
-            <div key={i}>
-              {i > 0 && <div className="h-px bg-foreground/10 my-3" />}
-              <div
-                className={`relative h-7 bg-surface rounded-full overflow-hidden ${canReview ? 'cursor-pointer' : ''}`}
-                onClick={canReview ? () => setReviewWeek(week) : undefined}
-              >
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${trackBg}`}
-                  style={{ width: review ? '100%' : `${progress}%` }}
-                />
-                {Array.from({ length: totalDays - 1 }, (_, d) => (
-                  <div
-                    key={d}
-                    className="absolute inset-y-0 w-px bg-foreground/15"
-                    style={{ left: `${((d + 1) / totalDays) * 100}%` }}
-                  />
-                ))}
-                {isCurrent && !review && (
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-base leading-none drop-shadow-sm transition-all duration-500"
-                    style={{ left: `${progress}%` }}
-                  >
-                    🏃‍➡️
-                  </div>
-                )}
-                {canReview && (
-                  <div
-                    className="absolute inset-y-0 rounded-r-full animate-pulse bg-grade-yellow/40"
-                    style={{
-                      left: `${((totalDays - 1) / totalDays) * 100}%`,
-                      width: `${(1 / totalDays) * 100}%`,
-                    }}
-                  />
-                )}
-                {isPast && !review && (
-                  <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <circle cx="7" cy="7" r="6" fill="var(--grade-green)" opacity="0.2" />
-                      <path d="M4 7l2 2 4-4" stroke="var(--grade-green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-between mt-0.5 px-0.5">
-                <span className="text-[10px] text-placeholder/60">{startLabel}</span>
-                <span className="text-[10px] text-placeholder/60">{endLabel}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 내 페이스 */}
-      <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
-        <h3 className="text-sm font-semibold text-foreground mb-3.5">내 페이스</h3>
-        <div className="flex gap-4">
-          {[
-            { label: '하루', amount: variableCost.daily },
-            { label: '주간', amount: variableCost.weekly },
-            { label: '월간', amount: variableCost.monthly },
-          ].map((item) => (
-            <div key={item.label} className="flex-1 bg-surface rounded-xl p-3 text-center">
-              <p className="text-xs text-sub mb-1">{item.label}</p>
-              <p className="text-sm md:text-base font-bold">{formatWonRaw(Math.floor(item.amount / 1000) * 1000)}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* 페이스메이커 메시지 */}
       <div className="bg-grade-yellow-bg rounded-2xl p-5 md:p-7 space-y-3">
-        <p className="text-caption font-semibold text-grade-yellow-text">오늘의 한마디</p>
+        <div className="flex items-center gap-2">
+          {pm && <GradeBadge grade={pm.grade} />}
+          <p className="text-caption font-semibold text-grade-yellow-text">페이스메이커</p>
+        </div>
         {isLoading ? (
           <div className="flex items-center gap-3 py-2">
             <div className="w-5 h-5 border-2 border-grade-yellow border-t-transparent rounded-full animate-spin shrink-0" />
@@ -242,10 +128,83 @@ export default function HomePage() {
         )}
       </div>
 
+      {/* Track */}
+      <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+        {weeks.map((week, wi) => {
+          const days = Array.from({ length: week.end - week.start + 1 }, (_, i) => week.start + i);
+          const totalDays = days.length;
+          const dailyBudget = Math.floor(variableCost.daily / 1000) * 1000;
+          const weeklyBudget = Math.floor(variableCost.weekly / 1000) * 1000;
+          const monthlyBudget = Math.floor(variableCost.monthly / 1000) * 1000;
+          return (
+            <div key={wi}>
+              {wi > 0 && <div className="h-px bg-foreground/10 my-3" />}
+              <div className="relative">
+              {/* 툴팁 */}
+              {hoverDay !== null && days.includes(hoverDay) && (() => {
+                const idx = hoverDay - week.start;
+                const check = checkMap.get(toDateStr(new Date(year, month, hoverDay)));
+                const isToday = hoverDay === today;
+                const leftPct = ((idx + 0.5) / 7) * 100;
+                return (
+                  <div
+                    className="absolute -top-2 -translate-y-full -translate-x-1/2 px-3 py-2 bg-foreground text-white text-[10px] rounded-lg whitespace-nowrap z-20 space-y-0.5 pointer-events-none animate-[fadeIn_150ms_ease-out]"
+                    style={{ left: `${Math.max(10, Math.min(90, leftPct))}%` }}
+                  >
+                    <p className="font-semibold text-xs">{month + 1}월 {hoverDay}일</p>
+                    {check ? (
+                      <p>{check.status === 'green' ? `${formatWonRaw(check.amount)} 절약 ✅` : check.status === 'red' ? `${formatWonRaw(check.amount)} 초과 🔴` : '예산 내 소비 🟡'}</p>
+                    ) : (
+                      <p>{isToday ? '클릭해서 체크하기' : '미체크'}</p>
+                    )}
+                    <div className="border-t border-white/20 pt-0.5 mt-0.5">
+                      <p>하루 {formatWonRaw(dailyBudget)} · 주간 {formatWonRaw(weeklyBudget)} · 월 {formatWonRaw(monthlyBudget)}</p>
+                    </div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-[4px] border-x-transparent border-t-[4px] border-t-foreground" />
+                  </div>
+                );
+              })()}
+              {/* 트랙 바 */}
+              <div className="h-7 bg-surface rounded-full overflow-hidden flex">
+                {days.map((day) => {
+                  const dateStr = toDateStr(new Date(year, month, day));
+                  const check = checkMap.get(dateStr);
+                  const isToday = day === today;
+                  const isFuture = day > today;
+                  const canTap = !isFuture;
+
+                  const colorClass = check
+                    ? check.status === 'green' ? 'bg-grade-green' : check.status === 'yellow' ? 'bg-grade-yellow' : 'bg-grade-red'
+                    : isToday ? 'bg-foreground/30 animate-pulse' : isFuture ? 'bg-transparent' : 'bg-foreground/10';
+
+                  return (
+                    <button
+                      key={day}
+                      disabled={isFuture}
+                      onClick={canTap ? () => setCheckDate(day) : undefined}
+                      onMouseEnter={!isFuture ? () => setHoverDay(day) : undefined}
+                      onMouseLeave={() => setHoverDay(null)}
+                      className={`h-full ${colorClass} ${canTap && !check ? 'hover:bg-foreground/20' : ''} transition-colors border-r border-foreground/15 last:border-r-0`}
+                      style={{ width: `${100 / 7}%` }}
+                    />
+                  );
+                })}
+              </div>
+              </div>
+              <div className="flex justify-between mt-0.5 px-0.5">
+                <span className="text-[10px] text-placeholder/60">{week.start}일</span>
+                <span className="text-[10px] text-placeholder/60">{week.end}일</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+
       {/* 오늘의 퀴즈 */}
       {pm && quizzes.length > 0 && (
         <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-foreground">오늘의 퀴즈</h3>
             <span className="text-[10px] text-placeholder">{Math.min(quizIndex + 1, quizzes.length)} / {quizzes.length}</span>
           </div>
@@ -258,19 +217,17 @@ export default function HomePage() {
             </div>
           ) : currentQuiz && (
             <div>
-              {/* 문제 */}
               <div className="bg-surface rounded-xl p-4 mb-4">
-                <p className="text-xs text-placeholder mb-1">{currentQuiz.category} · {currentQuiz.source}</p>
+                <p className="text-[10px] text-placeholder mb-1">{currentQuiz.category} · {currentQuiz.source}</p>
                 <p className="text-sm font-medium text-foreground leading-relaxed">{currentQuiz.question}</p>
               </div>
 
-              {/* 결과 표시 */}
               {quizResult ? (
                 <div className="space-y-3 animate-[fadeIn_300ms_ease-out]">
-                  <div className={`flex items-center gap-2 px-4 py-3 rounded-xl ${quizResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
-                    <span className="text-lg">{quizResult.correct ? '✅' : '❌'}</span>
+                  <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${quizResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
+                    <span className="text-base">{quizResult.correct ? '✅' : '❌'}</span>
                     <div>
-                      <p className={`text-sm font-semibold ${quizResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
+                      <p className={`text-xs font-semibold ${quizResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
                         {quizResult.correct ? '정답!' : '오답!'}
                       </p>
                       <p className="text-xs text-sub mt-0.5">{quizResult.explanation}</p>
@@ -278,27 +235,26 @@ export default function HomePage() {
                   </div>
                   <button
                     onClick={nextQuiz}
-                    className="w-full h-11 rounded-xl text-sm font-medium bg-foreground text-white hover:opacity-90 transition-opacity"
+                    className="w-full h-10 rounded-xl text-sm font-medium bg-foreground text-white hover:opacity-90 transition-opacity"
                   >
                     다음 문제
                   </button>
                 </div>
               ) : (
-                /* O / X 버튼 */
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleQuizAnswer(currentQuiz, true)}
                     disabled={answerQuiz.isPending}
-                    className="flex-1 h-14 rounded-xl text-xl font-bold bg-grade-green-bg text-grade-green-text hover:bg-grade-green/20 transition-colors disabled:opacity-50"
+                    className="flex-1 h-12 rounded-xl text-lg font-bold bg-grade-green-bg text-grade-green-text hover:bg-grade-green/20 transition-colors disabled:opacity-50"
                   >
-                    ⭕ O
+                    O
                   </button>
                   <button
                     onClick={() => handleQuizAnswer(currentQuiz, false)}
                     disabled={answerQuiz.isPending}
-                    className="flex-1 h-14 rounded-xl text-xl font-bold bg-grade-red-bg text-grade-red-text hover:bg-grade-red/20 transition-colors disabled:opacity-50"
+                    className="flex-1 h-12 rounded-xl text-lg font-bold bg-grade-red-bg text-grade-red-text hover:bg-grade-red/20 transition-colors disabled:opacity-50"
                   >
-                    ❌ X
+                    X
                   </button>
                 </div>
               )}
@@ -339,37 +295,82 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-1">
-        <p className="text-2xs text-placeholder">{pm?.disclaimer}</p>
-        <button aria-label="피드백 보내기" className="inline-flex items-center gap-1 text-2xs text-sub hover:text-foreground transition-colors">
-          <MessageCircle size={12} />
-          피드백
-        </button>
-      </div>
 
-      {/* 주간 리뷰 모달 */}
-      <WeeklyReviewModal
-        open={!!reviewWeek}
-        weekStart={reviewWeek?.start ?? new Date()}
-        weekEnd={reviewWeek?.end ?? new Date()}
-        weeklyBudget={variableCost.weekly}
-        dailyBudget={variableCost.daily}
-        isPending={submitReview.isPending}
-        onClose={() => setReviewWeek(null)}
-        onSubmit={(status, amount) => {
-          if (!reviewWeek) return;
-          submitReview.mutate(
-            {
-              weekStart: toDateStr(reviewWeek.start),
-              weekEnd: toDateStr(reviewWeek.end),
-              status,
-              amount,
-            },
-            { onSuccess: () => setReviewWeek(null) },
-          );
-        }}
-      />
+      {/* 일별 체크 모달 */}
+      {checkDate !== null && (() => {
+        const dailyBudgetCheon = Math.floor(variableCost.daily / 1000);
+        const currentCheon = parseInt(checkAmount) || 0;
+        const dailyBudgetWon = Math.floor(variableCost.daily / 1000) * 1000;
+        return (
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center px-4 pb-4">
+            <div className="absolute inset-0 bg-black/40 animate-[fadeIn_200ms_ease-out]" onClick={() => { setCheckDate(null); setCheckStatus(null); setCheckAmount(''); }} />
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-4 animate-[slideUp_300ms_ease-out] space-y-3">
+              {/* 헤더 한줄 */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-foreground">{month + 1}월 {checkDate}일 어땠어요?</p>
+                <p className="text-xs text-sub">하루 예산 {formatWonRaw(dailyBudgetWon)}</p>
+              </div>
+
+              {/* 상태 선택 */}
+              <div className="flex gap-2">
+                {([['green', '덜 썼어요', 'bg-grade-green'], ['yellow', '딱 맞았어요', 'bg-grade-yellow'], ['red', '더 썼어요', 'bg-grade-red']] as const).map(([status, label, bg]) => (
+                  <button
+                    key={status}
+                    onClick={() => { setCheckStatus(status); setCheckAmount(''); }}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                      checkStatus === status ? `${bg} text-white` : 'bg-surface text-sub hover:bg-surface/80'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 금액 입력 (덜/더 썼을 때만) */}
+              {checkStatus && checkStatus !== 'yellow' && (
+                <div className="animate-[fadeIn_200ms_ease-out]">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    readOnly
+                    value={checkAmount && currentCheon > 0 ? formatCheonWon(currentCheon) : ''}
+                    onKeyDown={(e) => {
+                      if (e.key >= '0' && e.key <= '9') {
+                        const next = parseInt((checkAmount || '') + e.key) || 0;
+                        if (checkStatus === 'green' && next > dailyBudgetCheon) { setCheckAmount(String(dailyBudgetCheon)); return; }
+                        if (checkStatus === 'red' && next > 10000) { setCheckAmount('10000'); return; }
+                        setCheckAmount((p) => p + e.key);
+                      } else if (e.key === 'Backspace') {
+                        setCheckAmount((p) => p.slice(0, -1));
+                      }
+                    }}
+                    placeholder={checkStatus === 'green' ? `최대 ${formatCheonWon(dailyBudgetCheon)}` : '금액 입력'}
+                    autoFocus
+                    className="w-full h-11 px-3 bg-surface border border-border rounded-xl text-foreground text-center font-bold placeholder:text-placeholder/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 caret-transparent"
+                  />
+                </div>
+              )}
+
+              {/* 기록하기 버튼 */}
+              {checkStatus && (
+                <button
+                  onClick={() => {
+                    const amountWon = checkStatus === 'yellow' ? 0 : (parseInt(checkAmount) || 0) * 1000;
+                    submitCheck.mutate(
+                      { date: toDateStr(new Date(year, month, checkDate)), status: checkStatus, amount: amountWon },
+                      { onSuccess: () => { setCheckDate(null); setCheckStatus(null); setCheckAmount(''); } },
+                    );
+                  }}
+                  disabled={submitCheck.isPending || (checkStatus !== 'yellow' && (!checkAmount || parseInt(checkAmount) <= 0))}
+                  className="w-full h-11 rounded-xl text-sm font-semibold text-white bg-foreground hover:opacity-90 transition-opacity disabled:bg-disabled disabled:text-sub"
+                >
+                  기록하기
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

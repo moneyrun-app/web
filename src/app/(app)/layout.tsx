@@ -85,23 +85,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             const input = JSON.parse(simRaw);
             const onboardRes = await api.post<{
               grade: 'RED' | 'YELLOW' | 'GREEN';
-              variableCost: { monthly: number; weekly: number; daily: number };
+              monthlyExpense: number; surplus: number;
+              investmentPeriod: number; vestingPeriod: number;
+              variableCost: { monthly: number; weekly: number; daily: number; daysInMonth: number };
             }>('/auth/onboarding', {
+              nickname: input.nickname || data.user.nickname || '',
               age: input.age || 0,
+              retirementAge: input.retirementAge || 0,
+              pensionStartAge: input.pensionStartAge || 65,
               monthlyIncome: input.monthlyIncome || 0,
-              monthlyInvestment: input.monthlyInvestment || 0,
               monthlyFixedCost: input.monthlyFixedCost || 0,
-              expectedReturn: input.expectedReturn || 0,
-              investmentYears: input.investmentYears || 0,
+              monthlyVariableCost: input.monthlyVariableCost || 0,
             });
 
             useFinanceStore.getState().setProfile({
+              nickname: input.nickname || data.user.nickname || '',
               age: input.age || 0,
+              retirementAge: input.retirementAge || 0,
+              pensionStartAge: input.pensionStartAge || 65,
               monthlyIncome: input.monthlyIncome || 0,
-              monthlyInvestment: input.monthlyInvestment || 0,
               monthlyFixedCost: input.monthlyFixedCost || 0,
-              expectedReturn: input.expectedReturn || 0,
-              investmentYears: input.investmentYears || 0,
+              monthlyVariableCost: input.monthlyVariableCost || 0,
+              monthlyExpense: onboardRes.monthlyExpense,
+              surplus: onboardRes.surplus,
+              investmentPeriod: onboardRes.investmentPeriod,
+              vestingPeriod: onboardRes.vestingPeriod,
               grade: onboardRes.grade,
               variableCost: onboardRes.variableCost,
             });
@@ -114,10 +122,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           // 기존 유저: DB 프로필 로드
           try {
             const profile = await api.get<{
-              age: number; monthlyIncome: number; monthlyInvestment: number;
-              monthlyFixedCost: number; expectedReturn: number; investmentYears: number;
+              nickname: string; age: number; retirementAge: number; pensionStartAge: number;
+              monthlyIncome: number; monthlyFixedCost: number; monthlyVariableCost: number;
+              monthlyExpense: number; surplus: number; investmentPeriod: number; vestingPeriod: number;
               grade: 'RED' | 'YELLOW' | 'GREEN';
-              variableCost: { monthly: number; weekly: number; daily: number };
+              variableCost: { monthly: number; weekly: number; daily: number; daysInMonth: number };
             }>('/finance/profile');
 
             useFinanceStore.getState().setProfile(profile);
@@ -127,10 +136,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               const input = JSON.parse(simRaw);
               const isDifferent =
                 profile.monthlyIncome !== (input.monthlyIncome || 0) ||
-                profile.monthlyInvestment !== (input.monthlyInvestment || 0) ||
                 profile.monthlyFixedCost !== (input.monthlyFixedCost || 0) ||
-                profile.expectedReturn !== (input.expectedReturn || 0) ||
-                profile.investmentYears !== (input.investmentYears || 0);
+                profile.monthlyVariableCost !== (input.monthlyVariableCost || 0) ||
+                profile.retirementAge !== (input.retirementAge || 0);
 
               sessionStorage.removeItem(SIM_STORAGE_KEY);
 
@@ -190,9 +198,11 @@ function syncUser(jwt: string) {
   api.setToken(jwt);
   // 프로필 API로 정보 가져오기
   api.get<{
-    age: number; monthlyIncome: number; monthlyInvestment: number; monthlyFixedCost: number;
-    expectedReturn: number; investmentYears: number;
-    grade: 'RED' | 'YELLOW' | 'GREEN'; variableCost: { monthly: number; weekly: number; daily: number };
+    nickname: string; age: number; retirementAge: number; pensionStartAge: number;
+    monthlyIncome: number; monthlyFixedCost: number; monthlyVariableCost: number;
+    monthlyExpense: number; surplus: number; investmentPeriod: number; vestingPeriod: number;
+    grade: 'RED' | 'YELLOW' | 'GREEN';
+    variableCost: { monthly: number; weekly: number; daily: number; daysInMonth: number };
   }>('/finance/profile').then((profile) => {
     useFinanceStore.getState().setProfile(profile);
   }).catch(() => {});

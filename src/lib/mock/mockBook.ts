@@ -1,64 +1,154 @@
 import type {
   DetailedReportsResponse,
   DetailedReport,
-  WeeklyReportListItem,
-  WeeklyReport,
+  MonthlyReportListItem,
+  MonthlyReport,
   LearnContentListItem,
   LearnContent,
   ExternalScrap,
 } from '@/types/book';
 
 export const mockDetailedReports: DetailedReportsResponse = {
-  canGenerateFree: false,
   items: [
     {
       id: 'dr-001',
-      title: '4월 재무 분석 리포트',
+      title: '시뮬레이터 분석 리포트',
       summary: '변동비 110만 원 중 외식비 35만 원이 가장 큰 비중을 차지합니다.',
-      pdfUrl: '/reports/dr-001.pdf',
+      analyzedAt: '2026-04-02T00:00:00.000Z',
       createdAt: '2026-04-02T00:00:00.000Z',
-    },
-    {
-      id: 'dr-002',
-      title: '3월 재무 분석 리포트',
-      summary: '저축률이 전월 대비 3% 상승했어요. 좋은 흐름입니다.',
-      pdfUrl: '/reports/dr-002.pdf',
-      createdAt: '2026-03-25T00:00:00.000Z',
     },
   ],
 };
 
 export const mockDetailedReport: DetailedReport = {
   id: 'dr-001',
-  title: '4월 재무 분석 리포트',
-  content: `## 현재 재무 상태\n\n월 실수령액 **230만 원** 기준, 고정비 **120만 원**을 제외하면 매달 **110만 원**이 변동비예요.\n\n## 잘하고 있는 점\n- 고정비를 서울 평균 이하로 유지하고 있어요\n\n## 개선할 점\n- 배달비를 주 2회 이하로 줄이면 월 15만 원 절약 가능`,
-  pdfUrl: '/reports/dr-001.pdf',
+  title: '시뮬레이터 분석 리포트',
+  content: {
+    sections: [
+      {
+        type: 'hero_card',
+        data: {
+          grade: 'RED',
+          title: '소비케어 집중이 필요해요',
+          subtitle: '총지출이 수입의 83%를 차지하고 있어요',
+          dailyBudget: 16000,
+          monthlyBudget: 500000,
+        },
+      },
+      {
+        type: 'summary_table',
+        title: '재무 현황 요약',
+        data: {
+          income: 3000000,
+          fixedCost: 1500000,
+          variableCost: 1000000,
+          totalExpense: 2500000,
+          surplus: 500000,
+          expenseRatio: 83.3,
+          daysInMonth: 30,
+        },
+      },
+      {
+        type: 'donut_chart',
+        title: '수입 배분 현황',
+        data: [
+          { label: '고정비', value: 1500000, color: '#6B7280' },
+          { label: '변동비', value: 1000000, color: '#EF4444' },
+          { label: '잉여자금', value: 500000, color: '#10B981' },
+        ],
+      },
+      {
+        type: 'comparison_card',
+        title: '또래 평균 비교 (30대 초반 서울)',
+        data: [
+          { label: '고정비', mine: 1500000, average: 1300000, diff: 200000 },
+          { label: '변동비', mine: 1000000, average: 800000, diff: 200000 },
+          { label: '잉여자금', mine: 500000, average: 700000, diff: -200000 },
+        ],
+      },
+      {
+        type: 'bar_chart',
+        title: '변동비 절감 플랜',
+        subtitle: '목표: 100만 원 → 70만 원 (30만 원 절감)',
+        data: [
+          { label: '외식/배달', current: 400000, target: 250000 },
+          { label: '카페/음료', current: 100000, target: 50000 },
+        ],
+      },
+      {
+        type: 'progress_card',
+        title: '등급 업그레이드 로드맵',
+        data: {
+          current: 'RED',
+          next: 'YELLOW',
+          currentRatio: 83.3,
+          targetRatio: 70,
+          amountToSave: 200000,
+          message: '변동비를 월 20만 원만 줄이면 YELLOW 등급으로 올라갈 수 있어요',
+        },
+      },
+      {
+        type: 'simulation_table',
+        title: '은퇴 시뮬레이션',
+        subtitle: '월 50만 원 투자 시 (24년간)',
+        data: {
+          investmentPeriod: 24,
+          vestingPeriod: 10,
+          monthlySaving: 500000,
+          cases: [
+            { label: '예적금 3%', rate: 3, asset55: 210000000, asset65: 280000000, monthlyPension: 583000 },
+            { label: 'KOSPI 7%', rate: 7, asset55: 400000000, asset65: 790000000, monthlyPension: 1645000 },
+            { label: 'S&P500 10%', rate: 10, asset55: 660000000, asset65: 1710000000, monthlyPension: 3562000 },
+          ],
+        },
+      },
+      {
+        type: 'tip_card',
+        title: '알고 계셨나요?',
+        items: [
+          { emoji: '☕', text: '커피 하루 1잔(4,500원) 줄이면 연 164만 원 절약' },
+          { emoji: '🍔', text: '배달 주 1회 줄이면 연 78만 원 절약' },
+        ],
+      },
+      {
+        type: 'action_checklist',
+        title: '이번 달 액션 플랜',
+        items: [
+          { id: 'a1', text: '배달앱 주 1회 제한', category: '식비', savingEstimate: 150000 },
+          { id: 'a2', text: '커피 텀블러 지참', category: '카페', savingEstimate: 50000 },
+        ],
+      },
+      {
+        type: 'disclaimer',
+        text: '이 리포트는 입력하신 재무 정보를 기반으로 생성된 참고 자료이며, 실제 투자 수익률은 시장 상황에 따라 달라질 수 있습니다.',
+      },
+    ],
+  },
+  analyzedAt: '2026-04-02T00:00:00.000Z',
   createdAt: '2026-04-02T00:00:00.000Z',
 };
 
-export const mockWeeklyReports: WeeklyReportListItem[] = [
+export const mockMonthlyReports: MonthlyReportListItem[] = [
   {
-    id: 'wr-001',
-    weekStart: '2026-03-31',
-    weekEnd: '2026-04-06',
-    summary: '회식이 잦았던 주였지만, 전체적으로 잘 관리했어요.',
-    createdAt: '2026-04-07T00:00:00.000Z',
+    id: 'mr-001',
+    month: '2026-03',
+    summary: '3월은 외식비가 많았지만, 전체적으로 잘 관리했어요.',
+    createdAt: '2026-04-01T00:00:00.000Z',
   },
 ];
 
-export const mockWeeklyReport: WeeklyReport = {
-  id: 'wr-001',
-  weekStart: '2026-03-31',
-  weekEnd: '2026-04-06',
-  summary: '회식이 잦았던 주...',
-  guide: `## 이번 주 요약\n\n회식이 잦았던 주였지만, 전체적으로 잘 관리했어요.\n\n### 다음 주 목표\n- 점심은 도시락 3번 이상\n- 배달 주문 주 1회 이하`,
-  weeklyStats: {
-    budgetComplianceRate: 0.72,
-    biggestCategory: 'food',
-    savedCategory: 'transport',
+export const mockMonthlyReport: MonthlyReport = {
+  id: 'mr-001',
+  month: '2026-03',
+  summary: '3월은 외식비가 많았지만...',
+  guide: `## 3월 요약\n\n외식비가 많았지만, 전체적으로 잘 관리했어요.\n\n### 4월 목표\n- 점심은 도시락 3번 이상\n- 배달 주문 주 1회 이하`,
+  monthlyStats: {
+    greenDays: 15,
+    yellowDays: 10,
+    redDays: 6,
+    totalCheckedDays: 31,
   },
-  userInput: { overallFeeling: 'tight', memo: '회식이 2번 있어서 식비가 많이 나갔어요' },
-  createdAt: '2026-04-07T00:00:00.000Z',
+  createdAt: '2026-04-01T00:00:00.000Z',
 };
 
 export const mockLearnContents: LearnContentListItem[] = [
