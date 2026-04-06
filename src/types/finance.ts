@@ -80,3 +80,37 @@ export interface FinanceProfileUpdateResponse {
   vestingPeriod: number;
   variableCost: VariableCost;
 }
+
+// === 또래 비교 통계 ===
+
+export interface PeerStatistics {
+  ageGroup: { label: string; range: [number, number] };
+  incomeGroup: { label: string; range: [number, number] };
+  peers: {
+    avgMonthlyIncome: number;
+    avgMonthlyExpense: number;
+    avgFixedCost: number;
+    avgVariableCost: number;
+    avgSavingsRate: number;
+    avgSurplus: number;
+  };
+}
+
+// === 투자 시나리오 (비율별) ===
+
+export interface InvestmentScenario {
+  label: string;
+  ratio: number;
+  monthlyInvestment: number;
+  totalPrincipal: number;
+  futureAsset: number;
+  nominalMonthlyPension: number;
+  realMonthlyPension: number;
+  trajectory: { age: number; asset: number }[];
+}
+
+export interface EnhancedSimulationResult extends SimulationResult {
+  investmentScenarios: InvestmentScenario[];
+  pensionYears: number;
+  inflationRate: number;
+}

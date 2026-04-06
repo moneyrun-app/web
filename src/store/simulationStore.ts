@@ -19,7 +19,7 @@ const defaultInput: SimulationInput = {
   nickname: '',
   age: 0,
   retirementAge: 0,
-  pensionStartAge: 65,
+  pensionStartAge: 0,
   monthlyIncome: 0,
   monthlyFixedCost: 0,
   monthlyVariableCost: 0,
@@ -42,7 +42,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as SimulationInput;
-        set({ input: { ...defaultInput, ...parsed }, hasResult: true });
+        set({ input: { ...defaultInput, ...parsed }, hasResult: false });
       } catch {
         // ignore
       }

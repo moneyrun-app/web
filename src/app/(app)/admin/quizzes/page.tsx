@@ -32,7 +32,7 @@ export default function AdminQuizzesPage() {
   return (
     <div>
       {/* 요약 */}
-      <div className="bg-white border border-border rounded-xl p-4 mb-4">
+      <div className="bg-background border border-border rounded-xl p-4 mb-4">
         <p className="text-sm text-sub">총 퀴즈 수</p>
         <p className="text-2xl font-bold">{data.total}개</p>
       </div>
@@ -42,12 +42,12 @@ export default function AdminQuizzesPage() {
         {data.quizzes.map((quiz) => {
           const isExpanded = expandedId === quiz.id;
           return (
-            <div key={quiz.id} className="bg-white border border-border rounded-xl overflow-hidden">
+            <div key={quiz.id} className="bg-background border border-border rounded-xl overflow-hidden">
               <button
                 onClick={() => setExpandedId(isExpanded ? null : quiz.id)}
                 className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface/50 transition-colors"
               >
-                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 shrink-0 mt-0.5">
+                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-status-info-bg text-status-info-text shrink-0 mt-0.5">
                   {quiz.category}
                 </span>
                 <span className="text-sm flex-1">{quiz.question}</span>
@@ -67,7 +67,7 @@ export default function AdminQuizzesPage() {
                         key={i}
                         className={`text-sm px-3 py-2 rounded-lg ${
                           i === quiz.correctAnswer
-                            ? 'bg-green-50 text-green-700 font-medium'
+                            ? 'bg-status-success-bg text-status-success-text font-medium'
                             : 'bg-surface text-sub'
                         }`}
                       >

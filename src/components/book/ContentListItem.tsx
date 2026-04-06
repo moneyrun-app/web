@@ -21,7 +21,7 @@ function ContentListItem({ id, date, title, summary, showDownload }: Props) {
   };
 
   return (
-    <div className="bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm">
+    <div className="bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm">
       <p className="text-xs text-sub mb-2">{formatDate(date)}</p>
       <button
         onClick={() => router.push(`/book/${id}`)}

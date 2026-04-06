@@ -34,13 +34,13 @@ export default function AdminUsersPage() {
   return (
     <div>
       {/* 요약 */}
-      <div className="bg-white border border-border rounded-xl p-4 mb-4">
+      <div className="bg-background border border-border rounded-xl p-4 mb-4">
         <p className="text-sm text-sub">총 유저 수</p>
         <p className="text-2xl font-bold">{data.total.toLocaleString()}명</p>
       </div>
 
       {/* 테이블 */}
-      <div className="bg-white border border-border rounded-xl overflow-hidden">
+      <div className="bg-background border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -60,15 +60,15 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3">
                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                       user.role === 'admin'
-                        ? 'bg-red-50 text-red-600'
-                        : 'bg-gray-100 text-gray-600'
+                        ? 'bg-status-error-bg text-status-error-text'
+                        : 'bg-surface text-sub'
                     }`}>
                       {user.role}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-block w-2 h-2 rounded-full ${
-                      user.hasCompletedOnboarding ? 'bg-green-400' : 'bg-gray-300'
+                      user.hasCompletedOnboarding ? 'bg-status-success' : 'bg-disabled'
                     }`} />
                   </td>
                   <td className="px-4 py-3 text-sub">

@@ -11,6 +11,8 @@ import {
   MacroIndicators, InflationImpact, GoalTracker, TaxBenefit,
   InvestmentPyramid, PortfolioSuggestion, Disclaimer,
 } from '@/components/book/ReportSections';
+import V6ReportDetail from '@/components/book/V6ReportDetail';
+import type { V6Report } from '@/types/report-v6';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function SectionRenderer({ section }: { section: any }) {
@@ -86,10 +88,30 @@ export default function BookDetailPage() {
     );
   }
 
-  // === Detailed Report (섹션 기반 or 마크다운 폴백) ===
+  // === Detailed Report ===
   if (isDetailed && detailed) {
+    // v6 report detection: reportVersion === 'v6' and sections array with section field
+    const isV6 = detailed.reportVersion === 'v6' && Array.isArray(detailed.sections) && detailed.sections.length > 0;
+
+    if (isV6) {
+      // Build V6Report object from DetailedReport
+      const v6Report: V6Report = {
+        id: detailed.id,
+        title: detailed.title,
+        reportVersion: detailed.reportVersion!,
+        grade: (detailed.grade as V6Report['grade']) ?? 'RED',
+        summary: detailed.summary ?? '',
+        sections: detailed.sections!,
+        userSnapshot: detailed.userSnapshot,
+        disclaimer: detailed.disclaimer,
+        analyzedAt: detailed.analyzedAt,
+        createdAt: detailed.createdAt,
+      };
+      return <V6ReportDetail report={v6Report} onBack={() => router.back()} />;
+    }
+
+    // Legacy: 섹션 기반 or 마크다운 폴백
     const rawContent = detailed.content;
-    // 백엔드가 JSON 문자열로 내려주면 파싱, 이미 객체면 그대로
     const parsed = typeof rawContent === 'string'
       ? (() => { try { return JSON.parse(rawContent); } catch { return null; } })()
       : rawContent;
@@ -112,13 +134,27 @@ export default function BookDetailPage() {
         {isLegacy ? (
           /* 백엔드가 아직 문자열로 내려줄 때 마크다운 폴백 */
           <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 pb-8">
-            {String(rawContent).split('\n').map((line, i) => {
-              if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>;
-              if (line.startsWith('### ')) return <h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>;
-              if (line.startsWith('- ')) return <li key={i} className="text-sm ml-4 mb-1">{line.replace('- ', '')}</li>;
-              if (line.trim() === '') return <br key={i} />;
-              return <p key={i} className="text-sm leading-relaxed mb-2">{line}</p>;
-            })}
+            {(() => {
+              const lines = String(rawContent).split('\n');
+              const elements: React.ReactNode[] = [];
+              let i = 0;
+              while (i < lines.length) {
+                const line = lines[i];
+                if (line.startsWith('## ')) { elements.push(<h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>); i++; }
+                else if (line.startsWith('### ')) { elements.push(<h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>); i++; }
+                else if (line.startsWith('- ')) {
+                  const items: React.ReactNode[] = [];
+                  while (i < lines.length && lines[i].startsWith('- ')) {
+                    items.push(<li key={i} className="text-sm mb-1">{lines[i].replace('- ', '')}</li>);
+                    i++;
+                  }
+                  elements.push(<ul key={`ul-${i}`} className="list-disc ml-4 my-2">{items}</ul>);
+                }
+                else if (line.trim() === '') { elements.push(<br key={i} />); i++; }
+                else { elements.push(<p key={i} className="text-sm leading-relaxed mb-2">{line}</p>); i++; }
+              }
+              return elements;
+            })()}
           </div>
         ) : (
           /* 섹션 기반 렌더링 */
@@ -159,13 +195,27 @@ export default function BookDetailPage() {
           </div>
         )}
         <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 pb-8">
-          {monthly.guide.split('\n').map((line, i) => {
-            if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>;
-            if (line.startsWith('### ')) return <h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>;
-            if (line.startsWith('- ')) return <li key={i} className="text-sm ml-4 mb-1">{line.replace('- ', '')}</li>;
-            if (line.trim() === '') return <br key={i} />;
-            return <p key={i} className="text-sm leading-relaxed mb-2">{line}</p>;
-          })}
+          {(() => {
+            const lines = monthly.guide.split('\n');
+            const elements: React.ReactNode[] = [];
+            let i = 0;
+            while (i < lines.length) {
+              const line = lines[i];
+              if (line.startsWith('## ')) { elements.push(<h2 key={i} className="text-lg font-bold mt-6 mb-2">{line.replace('## ', '')}</h2>); i++; }
+              else if (line.startsWith('### ')) { elements.push(<h3 key={i} className="text-base font-semibold mt-4 mb-1">{line.replace('### ', '')}</h3>); i++; }
+              else if (line.startsWith('- ')) {
+                const items: React.ReactNode[] = [];
+                while (i < lines.length && lines[i].startsWith('- ')) {
+                  items.push(<li key={i} className="text-sm mb-1">{lines[i].replace('- ', '')}</li>);
+                  i++;
+                }
+                elements.push(<ul key={`ul-${i}`} className="list-disc ml-4 my-2">{items}</ul>);
+              }
+              else if (line.trim() === '') { elements.push(<br key={i} />); i++; }
+              else { elements.push(<p key={i} className="text-sm leading-relaxed mb-2">{line}</p>); i++; }
+            }
+            return elements;
+          })()}
         </div>
       </div>
     );

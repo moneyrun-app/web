@@ -1,19 +1,100 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useFinanceStore } from '@/store/financeStore';
 import { usePacemakerToday, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz } from '@/hooks/useApi';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
 import type { DailyCheckStatus, Quiz } from '@/types/book';
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
+import Markdown from '@/components/common/Markdown';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-/** CommonMark에서 )**한글 패턴이 bold 닫기로 인식 안 되는 문제 우회 */
-function fixEmphasis(text: string): string {
-  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+/* ─── TrackWeek (memo) ─── */
+
+interface TrackWeekProps {
+  week: { start: number; end: number };
+  wi: number;
+  month: number;
+  year: number;
+  today: number;
+  isCurrentMonth: boolean;
+  todayDate: number;
+  hoverDay: number | null;
+  checkMap: Map<string, { status: DailyCheckStatus; amount: number }>;
+  variableCost: { daily: number; weekly: number; monthly: number };
+  onCheckDate: (day: number) => void;
+  onHoverDay: (day: number | null) => void;
 }
+
+const TrackWeek = memo(function TrackWeek({
+  week, wi, month, year, today, isCurrentMonth, todayDate,
+  hoverDay, checkMap, variableCost, onCheckDate, onHoverDay,
+}: TrackWeekProps) {
+  const days = Array.from({ length: week.end - week.start + 1 }, (_, i) => week.start + i);
+  const dailyBudget = Math.floor(variableCost.daily / 1000) * 1000;
+  const weeklyBudget = Math.floor(variableCost.weekly / 1000) * 1000;
+  const monthlyBudget = Math.floor(variableCost.monthly / 1000) * 1000;
+
+  return (
+    <div>
+      {wi > 0 && <div className="h-px bg-foreground/10 my-3" />}
+      <div className="relative">
+        {hoverDay !== null && days.includes(hoverDay) && (() => {
+          const idx = hoverDay - week.start;
+          const check = checkMap.get(toDateStr(new Date(year, month, hoverDay)));
+          const isToday = hoverDay === today;
+          const leftPct = ((idx + 0.5) / 7) * 100;
+          return (
+            <div
+              className="absolute -top-2 -translate-y-full -translate-x-1/2 px-3 py-2 bg-foreground text-background text-3xs rounded-lg whitespace-nowrap z-20 space-y-0.5 pointer-events-none animate-[fadeIn_150ms_ease-out]"
+              style={{ left: `${Math.max(10, Math.min(90, leftPct))}%` }}
+            >
+              <p className="font-semibold text-xs">{month + 1}월 {hoverDay}일</p>
+              {check ? (
+                <p>{check.status === 'green' ? `${formatWonRaw(check.amount)} 절약` : check.status === 'red' ? `${formatWonRaw(check.amount)} 초과` : '예산 내 소비'}</p>
+              ) : (
+                <p>{isToday ? '클릭해서 체크하기' : '미체크'}</p>
+              )}
+              <div className="border-t border-white/20 pt-0.5 mt-0.5">
+                <p>하루 {formatWonRaw(dailyBudget)} · 주간 {formatWonRaw(weeklyBudget)} · 월 {formatWonRaw(monthlyBudget)}</p>
+              </div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-[4px] border-x-transparent border-t-[4px] border-t-foreground" />
+            </div>
+          );
+        })()}
+        <div className="h-11 bg-surface rounded-full overflow-hidden flex" style={{ width: `${(days.length / 7) * 100}%` }}>
+          {days.map((day) => {
+            const dateStr = toDateStr(new Date(year, month, day));
+            const check = checkMap.get(dateStr);
+            const isToday = isCurrentMonth && day === todayDate;
+            const isFuture = isCurrentMonth ? day > todayDate : false;
+            const canTap = !isFuture;
+            const colorClass = check
+              ? check.status === 'green' ? 'bg-grade-green' : check.status === 'yellow' ? 'bg-grade-yellow' : 'bg-grade-red'
+              : isToday ? 'bg-foreground/30 animate-pulse' : isFuture ? 'bg-transparent' : 'bg-foreground/10';
+            return (
+              <button
+                key={day}
+                disabled={isFuture}
+                aria-label={`${month + 1}월 ${day}일 ${check ? (check.status === 'green' ? '절약' : check.status === 'red' ? '초과' : '예산 내') : isToday ? '오늘' : '미체크'}`}
+                onClick={canTap ? () => onCheckDate(day) : undefined}
+                onMouseEnter={!isFuture ? () => onHoverDay(day) : undefined}
+                onMouseLeave={() => onHoverDay(null)}
+                className={`h-full ${colorClass} ${canTap && !check ? 'hover:bg-foreground/20' : ''} transition-colors border-r border-foreground/15 last:border-r-0`}
+                style={{ width: `${100 / days.length}%` }}
+              />
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex justify-between mt-0.5 px-0.5" style={{ width: `${(days.length / 7) * 100}%` }}>
+        <span className="text-3xs text-placeholder/60">{week.start}일</span>
+        <span className="text-3xs text-placeholder/60">{week.end}일</span>
+      </div>
+    </div>
+  );
+});
 
 // 트랙 시작 월 (나중에 배포 시점 월로 변경)
 const TRACK_START_YEAR = 2026;
@@ -49,6 +130,7 @@ export default function HomePage() {
   const { variableCost } = useFinanceStore();
   const { data: pm, isLoading, error } = usePacemakerToday();
   const answerQuiz = useAnswerQuiz();
+  const checkModalRef = useFocusTrap<HTMLDivElement>();
 
   const [checkDate, setCheckDate] = useState<number | null>(null);
   const [checkStatus, setCheckStatus] = useState<DailyCheckStatus | null>(null);
@@ -130,7 +212,7 @@ export default function HomePage() {
   }, [isLoading]);
 
   // 퀴즈 답변 처리
-  const handleQuizAnswer = (quiz: Quiz, choiceIndex: number) => {
+  const handleQuizAnswer = useCallback((quiz: Quiz, choiceIndex: number) => {
     if (answeredIds.has(quiz.id)) return;
     answerQuiz.mutate(
       { quizId: quiz.id, userAnswer: choiceIndex },
@@ -141,13 +223,23 @@ export default function HomePage() {
         },
       },
     );
-  };
+  }, [answeredIds, answerQuiz]);
 
-  const nextQuiz = () => {
+  const nextQuiz = useCallback(() => {
     setQuizResult(null);
     setShowDetail(false);
     setQuizIndex((i) => i + 1);
-  };
+  }, []);
+
+  // ESC로 일별 체크 모달 닫기
+  useEffect(() => {
+    if (checkDate === null) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setCheckDate(null); setCheckStatus(null); setCheckAmount(''); }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [checkDate]);
 
   const quizzes = pm?.quizzes ?? [];
   const currentQuiz = quizzes[quizIndex];
@@ -155,20 +247,20 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 md:space-y-6">
-      {/* 페이스메이커 메시지 */}
-      <div className="bg-grade-yellow-bg rounded-2xl p-5 md:p-7 space-y-3">
+      {/* 페이스메이커 메시지 — 최상단 */}
+      <section aria-label="페이스메이커 메시지" className="bg-grade-yellow-bg rounded-2xl p-5 md:p-7 space-y-3">
         <div className="flex items-center gap-2">
           {pm && <GradeBadge grade={pm.grade} />}
           <p className="text-caption font-semibold text-grade-yellow-text">페이스메이커</p>
           {pm?.theme && (
-            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-foreground/10 text-sub font-medium">
+            <span className="ml-auto text-3xs px-2 py-0.5 rounded-full bg-foreground/10 text-sub font-medium">
               {pm.theme}
             </span>
           )}
         </div>
         {isLoading ? (
           <div className="flex items-center gap-3 py-2">
-            <div className="w-5 h-5 border-2 border-grade-yellow border-t-transparent rounded-full animate-spin shrink-0" />
+            <div role="status" aria-label="메시지 로딩 중" className="w-5 h-5 border-2 border-grade-yellow border-t-transparent rounded-full animate-spin shrink-0" />
             <p className="text-sm text-foreground animate-[fadeIn_300ms_ease-out]" key={loadingStep}>
               {loadingSteps[loadingStep]}
             </p>
@@ -187,20 +279,21 @@ export default function HomePage() {
             )}
           </>
         )}
-      </div>
+      </section>
 
       {/* Track */}
-      <div
-        className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm"
+      <section
+        aria-label="월간 소비 트랙"
+        className="bg-background border border-border rounded-2xl p-4 md:p-6 shadow-sm"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* 월 네비게이션 */}
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={goToPrevMonth}
             disabled={isStartMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface transition-colors disabled:opacity-20"
+            aria-label="이전 달"
+            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface transition-colors disabled:opacity-20"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -210,89 +303,40 @@ export default function HomePage() {
           <button
             onClick={goToNextMonth}
             disabled={isCurrentMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface transition-colors disabled:opacity-20"
+            aria-label="다음 달"
+            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface transition-colors disabled:opacity-20"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        {weeks.map((week, wi) => {
-          const days = Array.from({ length: week.end - week.start + 1 }, (_, i) => week.start + i);
-          const dailyBudget = Math.floor(variableCost.daily / 1000) * 1000;
-          const weeklyBudget = Math.floor(variableCost.weekly / 1000) * 1000;
-          const monthlyBudget = Math.floor(variableCost.monthly / 1000) * 1000;
-          return (
-            <div key={wi}>
-              {wi > 0 && <div className="h-px bg-foreground/10 my-3" />}
-              <div className="relative">
-              {/* 툴팁 */}
-              {hoverDay !== null && days.includes(hoverDay) && (() => {
-                const idx = hoverDay - week.start;
-                const check = checkMap.get(toDateStr(new Date(year, month, hoverDay)));
-                const isToday = hoverDay === today;
-                const leftPct = ((idx + 0.5) / 7) * 100;
-                return (
-                  <div
-                    className="absolute -top-2 -translate-y-full -translate-x-1/2 px-3 py-2 bg-foreground text-white text-[10px] rounded-lg whitespace-nowrap z-20 space-y-0.5 pointer-events-none animate-[fadeIn_150ms_ease-out]"
-                    style={{ left: `${Math.max(10, Math.min(90, leftPct))}%` }}
-                  >
-                    <p className="font-semibold text-xs">{month + 1}월 {hoverDay}일</p>
-                    {check ? (
-                      <p>{check.status === 'green' ? `${formatWonRaw(check.amount)} 절약 ✅` : check.status === 'red' ? `${formatWonRaw(check.amount)} 초과 🔴` : '예산 내 소비 🟡'}</p>
-                    ) : (
-                      <p>{isToday ? '클릭해서 체크하기' : '미체크'}</p>
-                    )}
-                    <div className="border-t border-white/20 pt-0.5 mt-0.5">
-                      <p>하루 {formatWonRaw(dailyBudget)} · 주간 {formatWonRaw(weeklyBudget)} · 월 {formatWonRaw(monthlyBudget)}</p>
-                    </div>
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-[4px] border-x-transparent border-t-[4px] border-t-foreground" />
-                  </div>
-                );
-              })()}
-              {/* 트랙 바 */}
-              <div className="h-7 bg-surface rounded-full overflow-hidden flex" style={{ width: `${(days.length / 7) * 100}%` }}>
-                {days.map((day) => {
-                  const dateStr = toDateStr(new Date(year, month, day));
-                  const check = checkMap.get(dateStr);
-                  const isToday = isCurrentMonth && day === todayDate;
-                  const isFuture = isCurrentMonth ? day > todayDate : false;
-                  const canTap = !isFuture;
-
-                  const colorClass = check
-                    ? check.status === 'green' ? 'bg-grade-green' : check.status === 'yellow' ? 'bg-grade-yellow' : 'bg-grade-red'
-                    : isToday ? 'bg-foreground/30 animate-pulse' : isFuture ? 'bg-transparent' : 'bg-foreground/10';
-
-                  return (
-                    <button
-                      key={day}
-                      disabled={isFuture}
-                      onClick={canTap ? () => setCheckDate(day) : undefined}
-                      onMouseEnter={!isFuture ? () => setHoverDay(day) : undefined}
-                      onMouseLeave={() => setHoverDay(null)}
-                      className={`h-full ${colorClass} ${canTap && !check ? 'hover:bg-foreground/20' : ''} transition-colors border-r border-foreground/15 last:border-r-0`}
-                      style={{ width: `${100 / days.length}%` }}
-                    />
-                  );
-                })}
-              </div>
-              </div>
-              <div className="flex justify-between mt-0.5 px-0.5" style={{ width: `${(days.length / 7) * 100}%` }}>
-                <span className="text-[10px] text-placeholder/60">{week.start}일</span>
-                <span className="text-[10px] text-placeholder/60">{week.end}일</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+        {weeks.map((week, wi) => (
+          <TrackWeek
+            key={wi}
+            week={week}
+            wi={wi}
+            month={month}
+            year={year}
+            today={today}
+            isCurrentMonth={isCurrentMonth}
+            todayDate={todayDate}
+            hoverDay={hoverDay}
+            checkMap={checkMap}
+            variableCost={variableCost}
+            onCheckDate={setCheckDate}
+            onHoverDay={setHoverDay}
+          />
+        ))}
+      </section>
 
       {/* 오늘의 퀴즈 */}
       {pm && quizzes.length > 0 && (
-        <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+        <section aria-label="오늘의 퀴즈" className="bg-background border border-border rounded-2xl p-4 md:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">오늘의 퀴즈</h3>
-            <span className="text-[10px] text-placeholder">{Math.min(quizIndex + 1, quizzes.length)} / {quizzes.length}</span>
+            <h2 className="text-sm font-semibold text-foreground">오늘의 퀴즈</h2>
+            <span className="text-3xs text-placeholder">{Math.min(quizIndex + 1, quizzes.length)} / {quizzes.length}</span>
           </div>
 
+          <div aria-live="polite" aria-atomic="true">
           {allDone ? (
             <div className="text-center py-6">
               <p className="text-2xl mb-2">🎉</p>
@@ -302,7 +346,7 @@ export default function HomePage() {
           ) : currentQuiz && (
             <div>
               <div className="bg-surface rounded-xl p-4 mb-4">
-                <p className="text-[10px] text-placeholder mb-1">{currentQuiz.category} · {currentQuiz.source}</p>
+                <p className="text-3xs text-placeholder mb-1">{currentQuiz.category} · {currentQuiz.source}</p>
                 <p className="text-sm font-medium text-foreground leading-relaxed">{currentQuiz.question}</p>
               </div>
 
@@ -322,14 +366,15 @@ export default function HomePage() {
                               ? 'border-grade-green bg-grade-green-bg'
                               : isUserPick
                                 ? 'border-grade-red bg-grade-red-bg'
-                                : 'border-border bg-white'
+                                : 'border-border bg-background'
                           }`}
                         >
-                          <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                          <span className={`w-5 h-5 rounded-full text-3xs font-bold flex items-center justify-center shrink-0 ${
                             isCorrect ? 'bg-grade-green text-white' : isUserPick ? 'bg-grade-red text-white' : 'bg-surface text-sub'
                           }`}>{idx}</span>
                           <span className={isCorrect ? 'font-semibold text-grade-green-text' : isUserPick ? 'text-grade-red-text' : 'text-sub'}>{choice}</span>
                         </div>
+
                       );
                     })}
                   </div>
@@ -341,16 +386,16 @@ export default function HomePage() {
                     <p className="text-xs text-sub mt-0.5">{quizResult.briefExplanation}</p>
                     {showDetail && (
                       <div className="text-xs text-sub mt-2 leading-relaxed prose prose-sm max-w-none">
-                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>{fixEmphasis(quizResult.detailedExplanation)}</ReactMarkdown>
+                        <Markdown>{quizResult.detailedExplanation}</Markdown>
                       </div>
                     )}
-                    <button onClick={() => setShowDetail(!showDetail)} className="text-[10px] text-accent mt-1.5">
+                    <button onClick={() => setShowDetail(!showDetail)} className="text-xs text-accent mt-1.5 py-1.5 px-2 -ml-2 rounded-lg hover:bg-accent/5 transition-colors">
                       {showDetail ? '접기' : '자세히 보기'}
                     </button>
                   </div>
                   <button
                     onClick={nextQuiz}
-                    className="w-full h-10 rounded-xl text-sm font-medium bg-foreground text-white hover:opacity-90 transition-opacity"
+                    className="w-full h-10 rounded-xl text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity"
                   >
                     다음 문제
                   </button>
@@ -362,9 +407,9 @@ export default function HomePage() {
                       key={i}
                       onClick={() => handleQuizAnswer(currentQuiz, i + 1)}
                       disabled={answerQuiz.isPending}
-                      className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl border border-border bg-white text-left text-sm hover:border-accent hover:bg-accent/5 transition-colors disabled:opacity-50"
+                      className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl border border-border bg-background text-left text-sm hover:border-accent hover:bg-accent/5 transition-colors disabled:opacity-50"
                     >
-                      <span className="w-5 h-5 rounded-full bg-surface text-[10px] font-bold text-sub flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="w-5 h-5 rounded-full bg-surface text-3xs font-bold text-sub flex items-center justify-center shrink-0">{i + 1}</span>
                       <span className="text-foreground">{choice}</span>
                     </button>
                   ))}
@@ -372,7 +417,8 @@ export default function HomePage() {
               )}
             </div>
           )}
-        </div>
+          </div>
+        </section>
       )}
 
       {/* 일별 체크 모달 */}
@@ -381,9 +427,9 @@ export default function HomePage() {
         const currentCheon = parseInt(checkAmount) || 0;
         const dailyBudgetWon = Math.floor(variableCost.daily / 1000) * 1000;
         return (
-          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center px-4 pb-4">
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center px-4 pb-4" role="dialog" aria-modal="true" aria-label={`${month + 1}월 ${checkDate}일 체크`} ref={checkModalRef}>
             <div className="absolute inset-0 bg-black/40 animate-[fadeIn_200ms_ease-out]" onClick={() => { setCheckDate(null); setCheckStatus(null); setCheckAmount(''); }} />
-            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-4 animate-[slideUp_300ms_ease-out] space-y-3">
+            <div className="relative bg-background rounded-2xl shadow-xl w-full max-w-sm p-4 animate-[slideUp_300ms_ease-out] space-y-3">
               {/* 헤더 한줄 */}
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-foreground">{month + 1}월 {checkDate}일 어땠어요?</p>
@@ -441,7 +487,7 @@ export default function HomePage() {
                     );
                   }}
                   disabled={submitCheck.isPending || (checkStatus !== 'yellow' && (!checkAmount || parseInt(checkAmount) <= 0))}
-                  className="w-full h-11 rounded-xl text-sm font-semibold text-white bg-foreground hover:opacity-90 transition-opacity disabled:bg-disabled disabled:text-sub"
+                  className="w-full h-11 rounded-xl text-sm font-semibold text-background bg-foreground hover:opacity-90 transition-opacity disabled:bg-disabled disabled:text-sub"
                 >
                   기록하기
                 </button>

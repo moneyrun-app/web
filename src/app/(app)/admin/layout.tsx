@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               href={tab.href}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm flex-1 justify-center transition-colors ${
                 isActive
-                  ? 'bg-white text-foreground font-medium shadow-sm'
+                  ? 'bg-background text-foreground font-medium shadow-sm'
                   : 'text-sub hover:text-foreground'
               }`}
             >

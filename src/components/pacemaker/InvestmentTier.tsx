@@ -8,7 +8,7 @@ interface Props {
 
 function InvestmentTier({ variableCost }: Props) {
   return (
-    <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+    <div className="bg-background border border-border rounded-2xl p-4 md:p-6 shadow-sm">
       <h3 className="text-sm font-semibold text-foreground mb-4">투자 체급</h3>
       <div className="space-y-3">
         <div className="flex justify-between items-baseline">

@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { signIn } from 'next-auth/react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface Props {
   open: boolean;
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export default function LoginSheet({ open, onClose, message }: Props) {
+  const dialogRef = useFocusTrap<HTMLDivElement>();
+
   if (!open) return null;
 
   const handleKakaoLogin = () => {
@@ -17,11 +20,11 @@ export default function LoginSheet({ open, onClose, message }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center">
-      <div className="bg-white w-full md:w-[400px] rounded-t-2xl md:rounded-2xl p-6">
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="login-title" ref={dialogRef}>
+      <div className="bg-background w-full md:w-[400px] rounded-t-2xl md:rounded-2xl p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold">로그인이 필요해요</h3>
+          <h2 id="login-title" className="text-lg font-bold">로그인이 필요해요</h2>
           <button onClick={onClose} className="p-1 text-sub hover:text-foreground transition-colors">
             <X size={20} />
           </button>
@@ -38,7 +41,7 @@ export default function LoginSheet({ open, onClose, message }: Props) {
           className="w-full h-12 rounded-xl font-semibold text-foreground bg-kakao transition-colors hover:opacity-90 flex items-center justify-center gap-2"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M9 1C4.58 1 1 3.79 1 7.21c0 2.17 1.45 4.08 3.63 5.18l-.93 3.44c-.08.29.25.52.5.35l4.12-2.74c.22.02.44.03.68.03 4.42 0 8-2.79 8-6.26C17 3.79 13.42 1 9 1z" fill="#191919"/>
+            <path d="M9 1C4.58 1 1 3.79 1 7.21c0 2.17 1.45 4.08 3.63 5.18l-.93 3.44c-.08.29.25.52.5.35l4.12-2.74c.22.02.44.03.68.03 4.42 0 8-2.79 8-6.26C17 3.79 13.42 1 9 1z" fill="currentColor"/>
           </svg>
           카카오로 시작하기
         </button>

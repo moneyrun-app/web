@@ -24,7 +24,7 @@ function EditRow({ label, value, onChange, suffix, id }: {
             const raw = e.target.value.replace(/[^0-9]/g, '');
             onChange(parseInt(raw, 10) || 0);
           }}
-          className="w-24 md:w-28 h-10 px-2 text-right text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+          className="w-24 md:w-28 h-10 px-2 text-right text-sm bg-surface border border-border rounded-lg focus:outline-none"
         />
         <span className="text-xs text-sub w-8 text-right">{suffix}</span>
       </div>
@@ -99,7 +99,7 @@ export default function MyPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* 프로필 수정 */}
-        <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+        <div className="bg-background border border-border rounded-2xl p-4 md:p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-foreground mb-4">내 페이스</h2>
           <div className="grid grid-cols-3 gap-3 mb-5 pb-5 border-b border-border">
             <div>
@@ -125,7 +125,7 @@ export default function MyPage() {
                 type="text"
                 value={editNickname}
                 onChange={(e) => setEditNickname(e.target.value)}
-                className="w-24 md:w-28 h-10 px-2 text-right text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/30"
+                className="w-24 md:w-28 h-10 px-2 text-right text-sm bg-surface border border-border rounded-lg focus:outline-none"
               />
             </div>
             <EditRow id="edit-age" label="나이" value={editAge} onChange={setEditAge} suffix="세" />
@@ -157,7 +157,7 @@ export default function MyPage() {
           <button
             onClick={handleSave}
             disabled={updateProfile.isPending}
-            className="w-full mt-5 h-11 flex items-center justify-center gap-1.5 bg-foreground text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full mt-5 h-11 flex items-center justify-center gap-1.5 bg-foreground text-background text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {updateProfile.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             저장
@@ -165,7 +165,7 @@ export default function MyPage() {
         </div>
 
         {/* 계정 */}
-        <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+        <div className="bg-background border border-border rounded-2xl p-4 md:p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-foreground mb-3">계정</h2>
           <div className="space-y-0.5">
             <div className="flex items-center justify-between h-10">
@@ -173,8 +173,9 @@ export default function MyPage() {
               <button
                 role="switch"
                 aria-checked={false}
-                aria-label="마케팅 수신 동의"
-                className="w-10 h-[22px] rounded-full bg-disabled relative transition-colors focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2"
+                aria-disabled="true"
+                aria-label="마케팅 수신 동의 (준비 중)"
+                className="w-10 h-[22px] rounded-full bg-disabled relative transition-colors opacity-50 cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2"
               >
                 <span className="absolute left-0.5 top-0.5 w-[18px] h-[18px] rounded-full bg-white shadow transition-transform" />
               </button>

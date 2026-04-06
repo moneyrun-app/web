@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import BottomNav from '@/components/common/BottomNav';
 import SideNav from '@/components/common/SideNav';
+import ThemeToggle from '@/components/common/ThemeToggle';
 import GradeProvider from '@/components/common/GradeProvider';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { useFinanceStore } from '@/store/financeStore';
@@ -80,10 +81,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         // 3. 시뮬레이션 데이터 처리
         const simRaw = sessionStorage.getItem(SIM_STORAGE_KEY);
 
+        console.log('[init] hasCompletedOnboarding:', data.user.hasCompletedOnboarding, 'simRaw:', !!simRaw);
+
         if (!data.user.hasCompletedOnboarding && simRaw) {
           // 신규 유저: 시뮬레이션 데이터로 온보딩
           try {
             const input = JSON.parse(simRaw);
+            console.log('[onboarding] 요청 전송:', { nickname: input.nickname, age: input.age, monthlyIncome: input.monthlyIncome });
             const onboardRes = await api.post<{
               grade: 'RED' | 'YELLOW' | 'GREEN';
               monthlyExpense: number; surplus: number;
@@ -115,8 +119,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               variableCost: onboardRes.variableCost,
             });
 
+            console.log('[onboarding] 성공:', onboardRes);
             sessionStorage.removeItem(SIM_STORAGE_KEY);
-          } catch {
+          } catch (e) {
+            console.error('[onboarding] 실패:', e);
             // 온보딩 실패 시 재시도 가능하도록 세션 유지
           }
         } else if (data.user.hasCompletedOnboarding) {
@@ -161,20 +167,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     init();
   }, [status, session?.accessToken]);
 
-  if (status === 'loading' || (status === 'authenticated' && !isInitialized)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-border border-t-foreground rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const isReady = status !== 'loading' && (status !== 'authenticated' || isInitialized);
 
   return (
     <GradeProvider grade={grade}>
+      <a href="#main-content" className="skip-nav">본문으로 건너뛰기</a>
       <SideNav />
+      {/* 모바일 헤더 */}
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 h-12 bg-background/90 backdrop-blur-sm border-b border-border">
+        <span className="text-base font-bold text-foreground">머니런</span>
+        <ThemeToggle />
+      </header>
       <main className="md:pl-60">
-        <div className="max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-8 py-4 md:py-8 pb-20 md:pb-8">
-          {children}
+        <div id="main-content" className="max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-8 py-4 md:py-8 pb-20 md:pb-8">
+          {isReady ? children : (
+            <div className="space-y-5" role="status" aria-label="페이지 로딩 중">
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
+                <p className="text-sm text-sub">AI가 맞춤 분석 준비 중이에요...</p>
+              </div>
+              <div className="space-y-4 animate-pulse">
+                <div className="h-28 bg-surface rounded-2xl" />
+                <div className="h-40 bg-surface rounded-2xl" />
+                <div className="h-32 bg-surface rounded-2xl" />
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <BottomNav />

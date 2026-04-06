@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Activity, BookOpen, User, Settings, LogOut, Shield } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUserStore } from '@/store/userStore';
+import ThemeToggle from './ThemeToggle';
 
 const tabs = [
   { href: '/home', icon: Activity, label: '페이스메이커' },
@@ -23,14 +24,15 @@ export default function SideNav() {
   };
 
   return (
-    <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 border-r border-border bg-white z-40">
+    <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 border-r border-border bg-background z-40">
       {/* Logo */}
-      <div className="h-16 flex items-center px-6">
+      <div className="h-16 flex items-center justify-between px-6">
         <span className="text-xl font-bold text-foreground">머니런</span>
+        <ThemeToggle />
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav aria-label="메인 네비게이션" className="flex-1 px-3 py-4 space-y-1">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
           const Icon = tab.icon;
@@ -60,7 +62,7 @@ export default function SideNav() {
             aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
               pathname.startsWith('/admin')
-                ? 'bg-red-50 text-red-600 font-medium'
+                ? 'bg-status-error-bg text-status-error-text font-medium'
                 : 'text-sub hover:bg-surface'
             }`}
           >
@@ -72,12 +74,13 @@ export default function SideNav() {
 
       {/* Bottom */}
       <div className="px-3 py-4 space-y-1 border-t border-border">
-        <button className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-sub hover:bg-surface w-full transition-colors">
+        <button aria-label="설정" className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-sub hover:bg-surface w-full transition-colors">
           <Settings className="w-5 h-5" />
           설정
         </button>
         <button
           onClick={handleLogout}
+          aria-label="로그아웃"
           className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-sub hover:bg-surface w-full transition-colors"
         >
           <LogOut className="w-5 h-5" />

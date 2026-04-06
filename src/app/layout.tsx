@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import { SessionProvider } from "next-auth/react";
 import QueryProvider from "@/components/providers/QueryProvider";
+import ThemeInit from "@/components/providers/ThemeInit";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +19,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -26,10 +27,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="ko" className={`${geistSans.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
+        <Script id="theme-init" strategy="beforeInteractive">{`try{if(localStorage.getItem('moneyrun_theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`}</Script>
         <SessionProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <ThemeInit />
+            {children}
+          </QueryProvider>
         </SessionProvider>
       </body>
     </html>

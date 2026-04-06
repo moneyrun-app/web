@@ -20,7 +20,7 @@ export default function BottomNav() {
     : tabs;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
+    <nav aria-label="메인 네비게이션" className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="flex justify-around items-center h-14">
         {allTabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
@@ -35,7 +35,7 @@ export default function BottomNav() {
               }`}
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className={`text-[10px] mt-0.5 ${isActive ? 'font-semibold' : ''}`}>
+              <span className={`text-3xs mt-0.5 ${isActive ? 'font-semibold' : ''}`}>
                 {tab.label}
               </span>
             </Link>

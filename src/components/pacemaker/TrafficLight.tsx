@@ -26,7 +26,7 @@ function TrafficLight({ dailyRemaining, weeklyRemaining }: Props) {
   const sc = statusConfig[status];
 
   return (
-    <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+    <div className="bg-background border border-border rounded-2xl p-4 md:p-6 shadow-sm">
       <h3 className="text-sm font-semibold text-foreground mb-4">지출 신호등</h3>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>

@@ -2,9 +2,9 @@ import { memo } from 'react';
 import type { Grade } from '@/types/finance';
 
 const config: Record<Grade, { bg: string; text: string; border: string }> = {
-  RED: { bg: 'bg-grade-red-bg', text: 'text-grade-red', border: 'border-grade-red' },
-  YELLOW: { bg: 'bg-grade-yellow-bg', text: 'text-grade-yellow', border: 'border-grade-yellow' },
-  GREEN: { bg: 'bg-grade-green-bg', text: 'text-grade-green', border: 'border-grade-green' },
+  RED: { bg: 'bg-grade-red-bg', text: 'text-grade-red-text', border: 'border-grade-red' },
+  YELLOW: { bg: 'bg-grade-yellow-bg', text: 'text-grade-yellow-text', border: 'border-grade-yellow' },
+  GREEN: { bg: 'bg-grade-green-bg', text: 'text-grade-green-text', border: 'border-grade-green' },
 };
 
 function GradeBadge({ grade, size = 'md' }: { grade: Grade; size?: 'sm' | 'md' | 'lg' }) {

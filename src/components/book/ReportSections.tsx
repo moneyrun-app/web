@@ -55,7 +55,7 @@ function FadeIn({ children, className }: { children: React.ReactNode; className?
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`bg-white border border-border rounded-2xl p-4 md:p-5 ${className}`}>{children}</div>;
+  return <div className={`bg-background border border-border rounded-2xl p-4 md:p-5 ${className}`}>{children}</div>;
 }
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -157,11 +157,11 @@ export function HeroCard({ data }: { data: any }) {
         <p className="text-sm text-sub mb-4">{data.subtitle}</p>
         <div className="flex gap-3">
           <div className="flex-1 bg-white/70 rounded-xl p-3 text-center">
-            <p className="text-[10px] text-sub mb-0.5">하루 예산</p>
+            <p className="text-3xs text-sub mb-0.5">하루 예산</p>
             <CountUpWon amount={data.dailyBudget} className={`text-lg font-bold ${grade.text}`} />
           </div>
           <div className="flex-1 bg-white/70 rounded-xl p-3 text-center">
-            <p className="text-[10px] text-sub mb-0.5">월 잉여자금</p>
+            <p className="text-3xs text-sub mb-0.5">월 잉여자금</p>
             <CountUpWon amount={data.monthlyBudget} className={`text-lg font-bold ${grade.text}`} />
           </div>
         </div>
@@ -215,7 +215,7 @@ export function SummaryTable({ title, data }: { title: string; data: any }) {
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-placeholder mt-3">지출 비율 {data.expenseRatio}% · {data.daysInMonth}일 기준</p>
+      <p className="text-3xs text-placeholder mt-3">지출 비율 {data.expenseRatio}% · {data.daysInMonth}일 기준</p>
     </Card></FadeIn>
   );
 }
@@ -237,7 +237,7 @@ export function DonutChart({ title, data }: { title: string; data: any[] }) {
           </PieChart>
           {surplus && (
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className="text-[9px] text-sub">잉여</p>
+              <p className="text-4xs text-sub">잉여</p>
               <p className="text-xs font-bold text-foreground">{formatWon(surplus.value)}</p>
             </div>
           )}
@@ -269,26 +269,26 @@ export function GaugeChart({ title, data }: { title: string; data: any }) {
       <div className="flex items-center gap-4 mt-3 mb-3">
         <div className="relative w-20 h-20">
           <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="#f0f0f0" strokeWidth="3" />
-            <motion.circle cx="18" cy="18" r="15" fill="none" stroke={pct < 40 ? '#EF4444' : pct < 70 ? '#F59E0B' : '#10B981'}
+            <circle cx="18" cy="18" r="15" fill="none" stroke="var(--border)" strokeWidth="3" />
+            <motion.circle cx="18" cy="18" r="15" fill="none" stroke={pct < 40 ? 'var(--grade-red)' : pct < 70 ? 'var(--grade-yellow)' : 'var(--grade-green)'}
               strokeWidth="3" strokeDasharray={`${pct * 0.94} 100`} strokeLinecap="round"
               initial={{ strokeDasharray: '0 100' }} whileInView={{ strokeDasharray: `${pct * 0.94} 100` }}
               viewport={{ once: true }} transition={{ duration: 1 }} />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-lg font-bold text-foreground">{data.score}</span>
-            <span className="text-[8px] text-sub">/ {data.maxScore}</span>
+            <span className="text-4xs text-sub">/ {data.maxScore}</span>
           </div>
         </div>
         <div className="flex-1">
           <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${color} text-white mb-2`}>{data.label}</span>
           {data.breakdown?.map((b: { item: string; score: number; max: number; detail: string }, i: number) => (
             <div key={i} className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] text-sub w-16 shrink-0">{b.item}</span>
+              <span className="text-3xs text-sub w-16 shrink-0">{b.item}</span>
               <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${color}`} style={{ width: `${(b.score / b.max) * 100}%` }} />
               </div>
-              <span className="text-[10px] text-placeholder w-10 text-right">{b.score}/{b.max}</span>
+              <span className="text-3xs text-placeholder w-10 text-right">{b.score}/{b.max}</span>
             </div>
           ))}
         </div>
@@ -315,20 +315,20 @@ export function ComparisonCard({ title, data }: { title: string; data: any[] }) 
             <div key={item.label}>
               <div className="flex justify-between items-center mb-1.5">
                 <span className="text-xs font-medium text-foreground">{item.label}</span>
-                <span className={`text-[10px] font-semibold ${isOver ? 'text-grade-red-text' : 'text-grade-green-text'}`}>
+                <span className={`text-3xs font-semibold ${isOver ? 'text-grade-red-text' : 'text-grade-green-text'}`}>
                   {isOver ? '+' : ''}{isPercent ? `${item.diff}%p` : formatWon(item.diff)}
                 </span>
               </div>
               <div className="space-y-1">
                 {[{ label: '나', val: item.mine, pct: minePct }, { label: '평균', val: item.average, pct: avgPct }].map(r => (
                   <div key={r.label} className="flex items-center gap-2">
-                    <span className="text-[10px] text-sub w-6 shrink-0">{r.label}</span>
+                    <span className="text-3xs text-sub w-6 shrink-0">{r.label}</span>
                     <div className="flex-1 h-4 bg-surface rounded-full overflow-hidden">
-                      <motion.div className={`h-full rounded-full ${r.label === '나' ? (isOver ? 'bg-grade-red' : 'bg-accent') : 'bg-gray-300'}`}
+                      <motion.div className={`h-full rounded-full ${r.label === '나' ? (isOver ? 'bg-grade-red' : 'bg-accent') : 'bg-disabled'}`}
                         initial={{ width: 0 }} whileInView={{ width: `${r.pct}%` }}
                         viewport={{ once: true }} transition={{ duration: 0.8, delay: r.label === '평균' ? 0.1 : 0 }} />
                     </div>
-                    <span className="text-[10px] text-sub w-16 text-right shrink-0">{fmtVal(r.val)}</span>
+                    <span className="text-3xs text-sub w-16 text-right shrink-0">{fmtVal(r.val)}</span>
                   </div>
                 ))}
               </div>
@@ -358,8 +358,8 @@ export function StackedBar({ title, subtitle, data }: { title: string; subtitle?
         {data.map((d: { label: string; value: number; ratio: number; color: string }) => (
           <div key={d.label} className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-            <span className="text-[10px] text-sub truncate">{d.label}</span>
-            <span className="text-[10px] font-medium text-foreground ml-auto">{formatWon(d.value)}</span>
+            <span className="text-3xs text-sub truncate">{d.label}</span>
+            <span className="text-3xs font-medium text-foreground ml-auto">{formatWon(d.value)}</span>
           </div>
         ))}
       </div>
@@ -380,13 +380,13 @@ export function SavingOpportunity({ title, items, totalSaving, message }: { titl
           <div key={i} className="flex items-center gap-2 p-2.5 bg-surface rounded-xl">
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-foreground">{item.category}</p>
-              <p className="text-[10px] text-sub">{item.method}</p>
+              <p className="text-3xs text-sub">{item.method}</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-[10px] text-sub line-through">{formatWon(item.current)}</p>
+              <p className="text-3xs text-sub line-through">{formatWon(item.current)}</p>
               <p className="text-xs font-bold text-grade-green-text">{formatWon(item.optimized)}</p>
             </div>
-            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${difficultyColor[item.difficulty] ?? ''}`}>
+            <span className={`text-4xs font-medium px-1.5 py-0.5 rounded ${difficultyColor[item.difficulty] ?? ''}`}>
               {difficultyLabel[item.difficulty] ?? item.difficulty}
             </span>
           </div>
@@ -394,7 +394,7 @@ export function SavingOpportunity({ title, items, totalSaving, message }: { titl
       </div>
       <div className="mt-3 p-3 bg-grade-green-bg rounded-xl">
         <p className="text-xs font-bold text-grade-green-text">월 {formatWon(totalSaving)} 절약 가능</p>
-        <p className="text-[10px] text-sub mt-0.5">{message}</p>
+        <p className="text-3xs text-sub mt-0.5">{message}</p>
       </div>
     </Card></FadeIn>
   );
@@ -414,13 +414,13 @@ export function BarChartSection({ title, subtitle, data }: { title: string; subt
               <p className="text-xs font-medium text-foreground mb-1">{item.label}</p>
               {[{ l: '현재', v: item.current, c: 'bg-grade-red' }, { l: '목표', v: item.target, c: 'bg-grade-green' }].map(r => (
                 <div key={r.l} className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] text-sub w-8 shrink-0">{r.l}</span>
+                  <span className="text-3xs text-sub w-8 shrink-0">{r.l}</span>
                   <div className="flex-1 h-4 bg-surface rounded-full overflow-hidden">
                     <motion.div className={`h-full rounded-full ${r.c}`} initial={{ width: 0 }}
                       whileInView={{ width: `${max > 0 ? (r.v / max) * 100 : 0}%` }}
                       viewport={{ once: true }} transition={{ duration: 0.8 }} />
                   </div>
-                  <span className="text-[10px] text-sub w-14 text-right shrink-0">{formatWon(r.v)}</span>
+                  <span className="text-3xs text-sub w-14 text-right shrink-0">{formatWon(r.v)}</span>
                 </div>
               ))}
             </div>
@@ -469,12 +469,12 @@ export function SimulationTable({ title, subtitle, data }: { title: string; subt
           <div key={c.label} className="bg-surface rounded-xl p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-foreground">{c.label}</span>
-              <span className="text-[10px] text-placeholder">연 {c.rate}%</span>
+              <span className="text-3xs text-placeholder">연 {c.rate}%</span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div><p className="text-[10px] text-sub mb-0.5">55세 자산</p><CountUpWon amount={c.asset55} className="text-xs font-bold text-foreground" /></div>
-              <div><p className="text-[10px] text-sub mb-0.5">65세 자산</p><CountUpWon amount={c.asset65} className="text-xs font-bold text-foreground" /></div>
-              <div><p className="text-[10px] text-sub mb-0.5">월 연금</p><CountUpWon amount={c.monthlyPension} className="text-xs font-bold text-accent" /></div>
+              <div><p className="text-3xs text-sub mb-0.5">55세 자산</p><CountUpWon amount={c.asset55} className="text-xs font-bold text-foreground" /></div>
+              <div><p className="text-3xs text-sub mb-0.5">65세 자산</p><CountUpWon amount={c.asset65} className="text-xs font-bold text-foreground" /></div>
+              <div><p className="text-3xs text-sub mb-0.5">월 연금</p><CountUpWon amount={c.monthlyPension} className="text-xs font-bold text-accent" /></div>
             </div>
           </div>
         ))}
@@ -523,8 +523,8 @@ export function ActionChecklist({ title, items }: { title: string; items: any[] 
             </span>
             <p className={`flex-1 text-sm ${checked.has(item.id) ? 'line-through text-sub' : 'text-foreground'}`}>{item.text}</p>
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] text-placeholder bg-white px-1.5 py-0.5 rounded">{item.category}</span>
-              {item.savingEstimate > 0 && <span className="text-[10px] text-grade-green-text font-medium">-{formatWon(item.savingEstimate)}</span>}
+              <span className="text-3xs text-placeholder bg-background px-1.5 py-0.5 rounded">{item.category}</span>
+              {item.savingEstimate > 0 && <span className="text-3xs text-grade-green-text font-medium">-{formatWon(item.savingEstimate)}</span>}
             </div>
           </button>
         ))}
@@ -547,7 +547,7 @@ export function LineChartSection({ title, subtitle, data }: { title: string; sub
       <SectionTitle title={title} subtitle={subtitle} />
       <div className="mt-3" style={{ width: '100%', height: 220 }}>
         <LineChart width={320} height={220} data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="name" tick={{ fontSize: 10 }} />
           <YAxis tick={{ fontSize: 9 }} tickFormatter={(v: number) => `${Math.round(v / 10000)}만`} width={40} />
           <Tooltip formatter={(v) => formatWon(Number(v))} labelStyle={{ fontSize: 11 }} />
@@ -569,10 +569,10 @@ export function ComparisonHighlight({ title, data }: { title: string; data: any 
       <div className="grid grid-cols-2 gap-3 mt-3">
         {[data.before, data.after].map((side: { label: string; monthly: number; asset55: number; pension: number }) => (
           <div key={side.label} className={`rounded-xl p-3 text-center ${side === data.after ? 'bg-grade-green-bg' : 'bg-surface'}`}>
-            <p className="text-[10px] text-sub mb-2">{side.label}</p>
+            <p className="text-3xs text-sub mb-2">{side.label}</p>
             <p className="text-xs font-bold text-foreground mb-1">월 {formatWon(side.monthly)}</p>
-            <p className="text-[10px] text-sub">55세: {formatWon(side.asset55)}</p>
-            <p className="text-[10px] text-sub">연금: {formatWon(side.pension)}/월</p>
+            <p className="text-3xs text-sub">55세: {formatWon(side.asset55)}</p>
+            <p className="text-3xs text-sub">연금: {formatWon(side.pension)}/월</p>
           </div>
         ))}
       </div>
@@ -591,7 +591,7 @@ export function CompoundEffect({ title, data, message }: { title: string; data: 
         {data.map((d: { label: string; years: number; total_invested: number; result_7pct: number; profit: number }, i: number) => (
           <div key={i} className={`p-3 rounded-xl ${i === 0 ? 'bg-grade-green-bg' : 'bg-surface'}`}>
             <p className="text-xs font-semibold text-foreground mb-1">{d.label}</p>
-            <div className="flex justify-between text-[10px] text-sub">
+            <div className="flex justify-between text-3xs text-sub">
               <span>투자원금: {formatWon(d.total_invested)}</span>
               <span>결과(7%): <span className="font-bold text-foreground">{formatWon(d.result_7pct)}</span></span>
               <span>수익: <span className="font-bold text-grade-green-text">{formatWon(d.profit)}</span></span>
@@ -616,10 +616,10 @@ export function WorldComparison({ title, data }: { title: string; data: any[] })
             <div className="flex items-center gap-2 mb-1">
               <span className="text-base">{d.flag}</span>
               <span className="text-xs font-semibold text-foreground">{d.country}</span>
-              <span className="text-[10px] text-sub ml-auto">저축률 {d.savingRate}%</span>
+              <span className="text-3xs text-sub ml-auto">저축률 {d.savingRate}%</span>
             </div>
-            <p className="text-[10px] text-sub mb-0.5">투자율 {d.investRate}% · {d.mainInvest}</p>
-            <p className="text-[10px] text-accent">{d.tip}</p>
+            <p className="text-3xs text-sub mb-0.5">투자율 {d.investRate}% · {d.mainInvest}</p>
+            <p className="text-3xs text-accent">{d.tip}</p>
           </div>
         ))}
       </div>
@@ -637,14 +637,14 @@ export function AgeRoadmap({ title, subtitle, data }: { title: string; subtitle?
         {data.map((d: { age: string; status: string; title: string; target: string; actions: string[] }, i: number) => (
           <div key={i} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className={`w-3 h-3 rounded-full shrink-0 ${d.status === 'current' ? 'bg-accent' : d.status === 'past' ? 'bg-gray-300' : 'bg-border'}`} />
+              <div className={`w-3 h-3 rounded-full shrink-0 ${d.status === 'current' ? 'bg-accent' : d.status === 'past' ? 'bg-disabled' : 'bg-border'}`} />
               {i < data.length - 1 && <div className="w-px flex-1 bg-border" />}
             </div>
             <div className={`pb-4 flex-1 ${d.status === 'current' ? '' : 'opacity-60'}`}>
               <p className={`text-xs font-bold ${d.status === 'current' ? 'text-accent' : 'text-foreground'}`}>{d.age}</p>
               <p className="text-xs font-semibold text-foreground">{d.title}</p>
-              <p className="text-[10px] text-sub mb-1">{d.target}</p>
-              {d.actions.map((a: string, j: number) => <p key={j} className="text-[10px] text-sub">· {a}</p>)}
+              <p className="text-3xs text-sub mb-1">{d.target}</p>
+              {d.actions.map((a: string, j: number) => <p key={j} className="text-3xs text-sub">· {a}</p>)}
             </div>
           </div>
         ))}
@@ -668,7 +668,7 @@ export function MacroIndicators({ title, data }: { title: string; data: any[] })
               <span className="text-xs font-medium text-foreground">{d.label}</span>
               <span className={`text-xs font-bold ${trendColor[d.trend] ?? 'text-sub'}`}>{d.value} {trendIcon[d.trend] ?? ''}</span>
             </div>
-            <p className="text-[10px] text-sub">{d.impact}</p>
+            <p className="text-3xs text-sub">{d.impact}</p>
           </div>
         ))}
       </div>
@@ -686,11 +686,11 @@ export function InflationImpact({ title, subtitle, data, message }: { title: str
       <div className="space-y-2 mt-3">
         {data.map((d: { year: string; purchasing_power: number; real_value: number }) => (
           <div key={d.year} className="flex items-center gap-2">
-            <span className="text-[10px] text-sub w-14 shrink-0">{d.year}</span>
+            <span className="text-3xs text-sub w-14 shrink-0">{d.year}</span>
             <div className="flex-1 h-4 bg-surface rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-grade-red" style={{ width: `${(d.real_value / maxVal) * 100}%` }} />
             </div>
-            <span className="text-[10px] font-medium text-foreground w-14 text-right">{formatWon(d.real_value)}</span>
+            <span className="text-3xs font-medium text-foreground w-14 text-right">{formatWon(d.real_value)}</span>
           </div>
         ))}
       </div>
@@ -712,7 +712,7 @@ export function GoalTracker({ title, data }: { title: string; data: any[] }) {
             <div key={d.goal}>
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs font-medium text-foreground">{d.goal}</span>
-                <span className="text-[10px] text-placeholder">{d.deadline}</span>
+                <span className="text-3xs text-placeholder">{d.deadline}</span>
               </div>
               <div className="h-2.5 bg-surface rounded-full overflow-hidden">
                 <motion.div className="h-full rounded-full bg-accent" initial={{ width: 0 }}
@@ -737,10 +737,10 @@ export function TaxBenefit({ title, items }: { title: string; items: any[] }) {
           <div key={i} className={`p-3 rounded-xl ${d.recommended ? 'bg-accent/5 border border-accent/20' : 'bg-surface'}`}>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-xs font-semibold text-foreground">{d.product}</span>
-              {d.recommended && <span className="text-[9px] text-accent font-bold bg-accent/10 px-1.5 py-0.5 rounded">추천</span>}
+              {d.recommended && <span className="text-4xs text-accent font-bold bg-accent/10 px-1.5 py-0.5 rounded">추천</span>}
             </div>
-            <p className="text-[10px] text-foreground/80">{d.benefit}</p>
-            <p className="text-[10px] text-sub">{d.condition}</p>
+            <p className="text-3xs text-foreground/80">{d.benefit}</p>
+            <p className="text-3xs text-sub">{d.condition}</p>
           </div>
         ))}
       </div>
@@ -759,10 +759,10 @@ export function InvestmentPyramid({ title, subtitle, data }: { title: string; su
         {sorted.map((d: { level: number; title: string; target: string; product: string; amount: string }) => (
           <div key={d.level} className="p-3 bg-surface rounded-xl" style={{ marginLeft: `${(d.level - 1) * 8}px` }}>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-bold text-white bg-accent w-5 h-5 rounded-full flex items-center justify-center">{d.level}</span>
+              <span className="text-3xs font-bold text-white bg-accent w-5 h-5 rounded-full flex items-center justify-center">{d.level}</span>
               <span className="text-xs font-semibold text-foreground">{d.title}</span>
             </div>
-            <p className="text-[10px] text-sub ml-7">{d.product} · {d.amount}</p>
+            <p className="text-3xs text-sub ml-7">{d.product} · {d.amount}</p>
           </div>
         ))}
       </div>
@@ -790,7 +790,7 @@ export function PortfolioSuggestion({ title, subtitle, data }: { title: string; 
                 <span className="text-xs font-medium text-foreground">{d.asset} ({d.ratio}%)</span>
                 <span className="text-xs text-sub">{formatWon(d.amount)}</span>
               </div>
-              <p className="text-[10px] text-sub">{d.reason}</p>
+              <p className="text-3xs text-sub">{d.reason}</p>
             </div>
           </div>
         ))}
@@ -801,5 +801,5 @@ export function PortfolioSuggestion({ title, subtitle, data }: { title: string; 
 
 // 26. disclaimer
 export function Disclaimer({ text }: { text: string }) {
-  return <FadeIn><p className="text-[10px] text-placeholder leading-relaxed px-1">{text}</p></FadeIn>;
+  return <FadeIn><p className="text-3xs text-placeholder leading-relaxed px-1">{text}</p></FadeIn>;
 }

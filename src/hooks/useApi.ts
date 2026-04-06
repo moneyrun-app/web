@@ -114,20 +114,22 @@ export function useSubmitDailyCheck() {
 
 // === Wrong Notes (오답노트) ===
 
-export function useWrongNotes() {
+export function useWrongNotes(enabled = true) {
   return useQuery({
     queryKey: ['wrong-notes'],
     queryFn: () => api.get<WrongNote[]>('/book/wrong-notes'),
+    enabled,
   });
 }
 
 
 // === Book: Detailed Reports ===
 
-export function useDetailedReports() {
+export function useDetailedReports(enabled = true) {
   return useQuery({
     queryKey: ['detailed-reports'],
     queryFn: () => api.get<DetailedReportsResponse>('/book/detailed-reports'),
+    enabled,
   });
 }
 
@@ -141,10 +143,11 @@ export function useDetailedReport(id: string) {
 
 // === Book: Monthly Reports ===
 
-export function useMonthlyReports() {
+export function useMonthlyReports(enabled = true) {
   return useQuery({
     queryKey: ['monthly-reports'],
     queryFn: () => api.get<MonthlyReportListItem[]>('/book/monthly-reports'),
+    enabled,
   });
 }
 
@@ -158,10 +161,11 @@ export function useMonthlyReport(id: string) {
 
 // === Book: Scraps ===
 
-export function useScraps() {
+export function useScraps(enabled = true) {
   return useQuery({
     queryKey: ['scraps'],
     queryFn: () => api.get<ExternalScrap[]>('/book/scraps'),
+    enabled,
   });
 }
 
@@ -210,6 +214,19 @@ export function useToggleLearnScrap() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['learn-contents'] });
     },
+  });
+}
+
+// === Statistics (비로그인) ===
+
+export function usePeerStatistics(age: number, monthlyIncome: number) {
+  return useQuery({
+    queryKey: ['peer-statistics', age, monthlyIncome],
+    queryFn: () => api.get<import('@/types/finance').PeerStatistics>(
+      `/statistics/peers?age=${age}&monthlyIncome=${monthlyIncome}`,
+    ),
+    enabled: age > 0 && monthlyIncome > 0,
+    staleTime: 1000 * 60 * 10, // 10분
   });
 }
 

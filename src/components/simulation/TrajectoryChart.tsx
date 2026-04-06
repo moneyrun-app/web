@@ -14,11 +14,11 @@ import {
 import { formatWon } from '@/lib/format';
 
 const COLORS = {
-  border: '#E5E7EB',
-  muted: '#9CA3AF',
-  surface: '#F9FAFB',
-  disabled: '#D1D5DB',
-  red: '#EF4444',
+  border: 'var(--border, #E5E7EB)',
+  muted: 'var(--sub-text, #9CA3AF)',
+  surface: 'var(--surface, #F9FAFB)',
+  disabled: 'var(--disabled, #D1D5DB)',
+  red: 'var(--grade-red, #EF4444)',
 };
 
 interface Props {

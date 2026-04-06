@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -39,10 +40,12 @@ export default function ConfirmDialog({
     }
   }, [open]);
 
+  const dialogRef = useFocusTrap<HTMLDivElement>();
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="confirm-title" ref={dialogRef}>
       {/* 백드롭 */}
       <div
         className="absolute inset-0 bg-black/40 animate-[fadeIn_200ms_ease-out]"
@@ -50,8 +53,8 @@ export default function ConfirmDialog({
       />
 
       {/* 다이얼로그 */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-[slideUp_300ms_ease-out]">
-        <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
+      <div className="relative bg-background rounded-2xl shadow-xl w-full max-w-sm p-6 animate-[slideUp_300ms_ease-out]">
+        <h2 id="confirm-title" className="text-lg font-bold text-foreground mb-2">{title}</h2>
         <p className="text-sm text-sub leading-relaxed whitespace-pre-line">{description}</p>
 
         <div className="flex gap-3 mt-6">
@@ -63,7 +66,7 @@ export default function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 h-12 rounded-xl bg-foreground text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            className="flex-1 h-12 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
           >
             {confirmText}
           </button>

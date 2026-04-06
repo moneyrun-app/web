@@ -218,7 +218,13 @@ export interface DetailedReportContent {
 export interface DetailedReport {
   id: string;
   title: string;
-  content: DetailedReportContent | string;
+  reportVersion?: string;
+  grade?: string;
+  summary?: string;
+  sections?: import('./report-v6').V6Section[];
+  content?: DetailedReportContent | string;
+  userSnapshot?: Record<string, unknown>;
+  disclaimer?: string;
   analyzedAt: string;
   createdAt: string;
 }

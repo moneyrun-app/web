@@ -98,7 +98,7 @@ function EditDialog({
         className="absolute inset-0 bg-black/40 animate-[fadeIn_200ms_ease-out]"
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-[slideUp_300ms_ease-out]">
+      <div className="relative bg-background rounded-2xl shadow-xl w-full max-w-sm p-6 animate-[slideUp_300ms_ease-out]">
         <h3 className="text-lg font-bold text-foreground mb-1">{label} 수정</h3>
         <p className="text-xs text-sub mb-4">{configKey}</p>
 
@@ -115,7 +115,7 @@ function EditDialog({
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent font-mono"
+            className="w-full px-3 py-2.5 text-sm border border-border rounded-lg focus:outline-none font-mono"
             autoFocus
             placeholder={isCurrency ? '숫자만 입력 (원 단위)' : '값 입력'}
             onKeyDown={(e) => {
@@ -134,7 +134,7 @@ function EditDialog({
           <button
             onClick={() => onSave(value)}
             disabled={isPending || value === currentValue || !value.trim()}
-            className="flex-1 h-12 rounded-xl bg-foreground text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 h-12 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -190,7 +190,7 @@ export default function AdminConfigPage() {
 
   return (
     <div>
-      <div className="bg-white border border-border rounded-xl overflow-hidden">
+      <div className="bg-background border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border bg-surface">
           <p className="text-sm font-medium">운영 상수</p>
           <p className="text-xs text-sub mt-0.5">
@@ -213,7 +213,7 @@ export default function AdminConfigPage() {
                 <span className="text-sm font-mono">
                   {formatDisplay(currentVal, item.isCurrency)}
                   {isSaved && (
-                    <span className="ml-2 text-xs text-green-500">저장됨</span>
+                    <span className="ml-2 text-xs text-status-success-text">저장됨</span>
                   )}
                 </span>
 
