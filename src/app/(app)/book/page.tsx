@@ -6,7 +6,13 @@ import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2 } from 'lucid
 import CategoryTabs, { type BookTab } from '@/components/book/CategoryTabs';
 import { useDetailedReports, useMonthlyReports, useScraps, useCreateScrap, useWrongNotes } from '@/hooks/useApi';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { decodeHtml } from '@/lib/format';
+
+/** CommonMark에서 )**한글 패턴이 bold 닫기로 인식 안 되는 문제 우회 */
+function fixEmphasis(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
 
 export default function BookPage() {
   const router = useRouter();
@@ -98,10 +104,10 @@ export default function BookPage() {
                 <p className="text-sub text-center py-12">틀린 문제가 없어요!</p>
               )}
               {(wrongNotes ?? []).map((note) => (
-                <button
+                <div
                   key={note.id}
                   onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)}
-                  className="w-full text-left bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm"
+                  className="w-full text-left bg-white border border-border rounded-2xl p-4 md:p-5 shadow-sm cursor-pointer"
                 >
                   <p className="text-[10px] text-placeholder mb-1">{note.category} · {note.source}</p>
                   <p className="text-sm font-medium text-foreground mb-2">{note.question}</p>
@@ -121,7 +127,7 @@ export default function BookPage() {
                     <div className="mt-3 pt-3 border-t border-border">
                       <p className="text-[10px] font-semibold text-foreground mb-1.5">상세 설명</p>
                       <div className="text-xs text-sub leading-relaxed prose prose-sm max-w-none">
-                        <ReactMarkdown>{note.detailedExplanation}</ReactMarkdown>
+                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>{fixEmphasis(note.detailedExplanation)}</ReactMarkdown>
                       </div>
                     </div>
                   )}
@@ -129,7 +135,7 @@ export default function BookPage() {
                   {note.detailedExplanation && (
                     <p className="text-[10px] text-accent mt-2">{expandedNote === note.id ? '접기' : '자세히 보기'}</p>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           )

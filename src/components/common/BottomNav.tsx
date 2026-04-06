@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, BookOpen, User } from 'lucide-react';
+import { Activity, BookOpen, User, Shield } from 'lucide-react';
+import { useUserStore } from '@/store/userStore';
 
 const tabs = [
   { href: '/home', icon: Activity, label: '페이스메이커' },
@@ -12,11 +13,16 @@ const tabs = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const role = useUserStore((s) => s.role);
+
+  const allTabs = role === 'admin'
+    ? [...tabs, { href: '/admin', icon: Shield, label: '어드민' }]
+    : tabs;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="flex justify-around items-center h-14">
-        {tabs.map((tab) => {
+        {allTabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
           const Icon = tab.icon;
           return (

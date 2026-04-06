@@ -3,8 +3,10 @@ import type { PacemakerToday } from '@/types/book';
 export const mockPacemakerToday: PacemakerToday = {
   id: 'pm-001',
   date: '2026-04-05',
-  message: '야 하루에 16,000원인데 어제 추천한 행동 잘 했더라 ㅎㅎ 오늘도 도시락?',
+  message: '시은아, 하루에 16,000원인데 어제 추천한 행동 잘 했더라 ㅎㅎ 오늘도 도시락?',
   grade: 'YELLOW',
+  theme: '이번 주 예산 점검',
+  quote: '워렌 버핏 — 돈을 잃지 마라. 그게 첫 번째 규칙이다.',
   dailyVariableCost: 16_000,
   spendingStatus: {
     todayRemaining: 16_000,
@@ -22,7 +24,6 @@ export const mockPacemakerToday: PacemakerToday = {
     },
   ],
   quizCount: 1,
-  actions: [],
   disclaimer: '참고용 조언이며, 개인 상황에 따라 다를 수 있어요',
   createdAt: '2026-04-05T00:00:00.000Z',
 };

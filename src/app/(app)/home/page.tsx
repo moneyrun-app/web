@@ -1,17 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useFinanceStore } from '@/store/financeStore';
-import { usePacemakerToday, useCompleteAction, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz } from '@/hooks/useApi';
+import { usePacemakerToday, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz } from '@/hooks/useApi';
 import { formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
 import type { DailyCheckStatus, Quiz } from '@/types/book';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+/** CommonMark에서 )**한글 패턴이 bold 닫기로 인식 안 되는 문제 우회 */
+function fixEmphasis(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+// 트랙 시작 월 (나중에 배포 시점 월로 변경)
+const TRACK_START_YEAR = 2026;
+const TRACK_START_MONTH = 2; // 0-indexed: 2 = 3월
 
 /** 7일씩 나누기: 1~7, 8~14, ..., 마지막 주는 남은 일수 */
-function getMonthWeeks(now: Date) {
-  const year = now.getFullYear();
-  const month = now.getMonth();
+function getMonthWeeks(year: number, month: number) {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const weeks: { start: number; end: number }[] = [];
 
@@ -21,7 +30,7 @@ function getMonthWeeks(now: Date) {
     weeks.push({ start: day, end });
     day = end + 1;
   }
-  return { weeks, year, month, lastDay };
+  return { weeks, lastDay };
 }
 
 function formatCheonWon(n: number): string {
@@ -39,7 +48,6 @@ function toDateStr(d: Date) {
 export default function HomePage() {
   const { variableCost } = useFinanceStore();
   const { data: pm, isLoading, error } = usePacemakerToday();
-  const completeMutation = useCompleteAction();
   const answerQuiz = useAnswerQuiz();
 
   const [checkDate, setCheckDate] = useState<number | null>(null);
@@ -52,15 +60,53 @@ export default function HomePage() {
   const [hoverDay, setHoverDay] = useState<number | null>(null);
 
   const now = new Date();
-  const today = now.getDate();
-  const { weeks, year, month } = getMonthWeeks(now);
+  const todayDate = now.getDate();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
 
-  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+  // 트랙 월 네비게이션
+  const [trackYear, setTrackYear] = useState(currentYear);
+  const [trackMonth, setTrackMonth] = useState(currentMonth);
+  const isCurrentMonth = trackYear === currentYear && trackMonth === currentMonth;
+  const isStartMonth = trackYear === TRACK_START_YEAR && trackMonth === TRACK_START_MONTH;
+
+  const today = isCurrentMonth ? todayDate : 0; // 현재 월이 아니면 today 하이라이트 없음
+  const { weeks } = getMonthWeeks(trackYear, trackMonth);
+  const year = trackYear;
+  const month = trackMonth;
+
+  const goToPrevMonth = useCallback(() => {
+    if (isStartMonth) return;
+    setTrackMonth((m) => {
+      if (m === 0) { setTrackYear((y) => y - 1); return 11; }
+      return m - 1;
+    });
+  }, [isStartMonth]);
+
+  const goToNextMonth = useCallback(() => {
+    if (isCurrentMonth) return;
+    setTrackMonth((m) => {
+      if (m === 11) { setTrackYear((y) => y + 1); return 0; }
+      return m + 1;
+    });
+  }, [isCurrentMonth]);
+
+  // 스와이프 지원
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) < 50) return;
+    if (diff > 0) goToNextMonth();
+    else goToPrevMonth();
+  };
+
+  const monthStr = `${trackYear}-${String(trackMonth + 1).padStart(2, '0')}`;
   const { data: dailyChecks } = useDailyChecks(monthStr);
   const submitCheck = useSubmitDailyCheck();
 
   const checkMap = new Map<string, { status: DailyCheckStatus; amount: number }>();
-  (dailyChecks ?? []).forEach((c) => checkMap.set(c.date.slice(0, 10), { status: c.status, amount: c.amount }));
+  (dailyChecks?.days ?? []).forEach((c) => checkMap.set(c.date.slice(0, 10), { status: c.status, amount: c.amount }));
 
   // 로딩 단계별 문구
   const loadingSteps = [
@@ -114,6 +160,11 @@ export default function HomePage() {
         <div className="flex items-center gap-2">
           {pm && <GradeBadge grade={pm.grade} />}
           <p className="text-caption font-semibold text-grade-yellow-text">페이스메이커</p>
+          {pm?.theme && (
+            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-foreground/10 text-sub font-medium">
+              {pm.theme}
+            </span>
+          )}
         </div>
         {isLoading ? (
           <div className="flex items-center gap-3 py-2">
@@ -127,15 +178,45 @@ export default function HomePage() {
             메시지를 불러오지 못했어요 · 다시 시도
           </button>
         ) : (
-          <p className="text-body-lg md:text-base text-foreground leading-relaxed">{pm.message}</p>
+          <>
+            <p className="text-body-lg md:text-base text-foreground leading-relaxed">{pm.message}</p>
+            {pm.quote && (
+              <p className="text-xs text-sub italic border-l-2 border-foreground/20 pl-3 mt-2">
+                {pm.quote}
+              </p>
+            )}
+          </>
         )}
       </div>
 
       {/* Track */}
-      <div className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm">
+      <div
+        className="bg-white border border-border rounded-2xl p-4 md:p-6 shadow-sm"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* 월 네비게이션 */}
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={goToPrevMonth}
+            disabled={isStartMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface transition-colors disabled:opacity-20"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <p className="text-sm font-semibold text-foreground">
+            {trackYear}년 {trackMonth + 1}월
+          </p>
+          <button
+            onClick={goToNextMonth}
+            disabled={isCurrentMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface transition-colors disabled:opacity-20"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
         {weeks.map((week, wi) => {
           const days = Array.from({ length: week.end - week.start + 1 }, (_, i) => week.start + i);
-          const totalDays = days.length;
           const dailyBudget = Math.floor(variableCost.daily / 1000) * 1000;
           const weeklyBudget = Math.floor(variableCost.weekly / 1000) * 1000;
           const monthlyBudget = Math.floor(variableCost.monthly / 1000) * 1000;
@@ -168,12 +249,12 @@ export default function HomePage() {
                 );
               })()}
               {/* 트랙 바 */}
-              <div className="h-7 bg-surface rounded-full overflow-hidden flex">
+              <div className="h-7 bg-surface rounded-full overflow-hidden flex" style={{ width: `${(days.length / 7) * 100}%` }}>
                 {days.map((day) => {
                   const dateStr = toDateStr(new Date(year, month, day));
                   const check = checkMap.get(dateStr);
-                  const isToday = day === today;
-                  const isFuture = day > today;
+                  const isToday = isCurrentMonth && day === todayDate;
+                  const isFuture = isCurrentMonth ? day > todayDate : false;
                   const canTap = !isFuture;
 
                   const colorClass = check
@@ -188,13 +269,13 @@ export default function HomePage() {
                       onMouseEnter={!isFuture ? () => setHoverDay(day) : undefined}
                       onMouseLeave={() => setHoverDay(null)}
                       className={`h-full ${colorClass} ${canTap && !check ? 'hover:bg-foreground/20' : ''} transition-colors border-r border-foreground/15 last:border-r-0`}
-                      style={{ width: `${100 / 7}%` }}
+                      style={{ width: `${100 / days.length}%` }}
                     />
                   );
                 })}
               </div>
               </div>
-              <div className="flex justify-between mt-0.5 px-0.5">
+              <div className="flex justify-between mt-0.5 px-0.5" style={{ width: `${(days.length / 7) * 100}%` }}>
                 <span className="text-[10px] text-placeholder/60">{week.start}일</span>
                 <span className="text-[10px] text-placeholder/60">{week.end}일</span>
               </div>
@@ -260,7 +341,7 @@ export default function HomePage() {
                     <p className="text-xs text-sub mt-0.5">{quizResult.briefExplanation}</p>
                     {showDetail && (
                       <div className="text-xs text-sub mt-2 leading-relaxed prose prose-sm max-w-none">
-                        <ReactMarkdown>{quizResult.detailedExplanation}</ReactMarkdown>
+                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>{fixEmphasis(quizResult.detailedExplanation)}</ReactMarkdown>
                       </div>
                     )}
                     <button onClick={() => setShowDetail(!showDetail)} className="text-[10px] text-accent mt-1.5">
@@ -293,39 +374,6 @@ export default function HomePage() {
           )}
         </div>
       )}
-
-      {/* 추천 행동 */}
-      {pm && (pm.actions ?? []).length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-2">추천 행동</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {(pm.actions ?? []).map((action) => (
-              <div key={action.id} className="bg-white border border-border rounded-2xl p-4 shadow-sm">
-                <p className="text-sm font-medium text-foreground mb-3">{action.title}</p>
-                <div className="flex gap-2">
-                  {action.status === 'pending' ? (
-                    <>
-                      <button
-                        onClick={() => completeMutation.mutate(action.id)}
-                        disabled={completeMutation.isPending}
-                        className="h-11 px-3 text-xs font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity"
-                      >
-                        {action.label}
-                      </button>
-                      <button className="h-11 px-3 text-xs font-medium rounded-lg border border-border text-sub hover:bg-surface transition-colors">
-                        다음에
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-xs text-grade-green font-medium">완료!</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
 
       {/* 일별 체크 모달 */}
       {checkDate !== null && (() => {

@@ -11,6 +11,38 @@ export interface DailyCheck {
   amount: number;
 }
 
+export interface DailyChecksSummary {
+  totalSpent: number;
+  adjustedBudget: number;
+  dailyBudget: number;
+  monthlyBudget: number;
+  spentRate: number;
+  daysInMonth: number;
+  daysTracked: number;
+  daysUnder: number;
+  daysOver: number;
+  currentStreak: number;
+  bestStreak: number;
+}
+
+export interface DailyChecksResponse {
+  days: DailyCheck[];
+  summary: DailyChecksSummary;
+}
+
+export interface WeeklySummary {
+  weekStart: string;
+  weekEnd: string;
+  daysTracked: number;
+  daysSkipped: number;
+  daysUnder: number;
+  daysOver: number;
+  totalSpent: number;
+  adjustedBudget: number;
+  spentRate: number;
+  remainingBudget: number;
+}
+
 // === Pacemaker ===
 
 export type SpendingLevel = 'green' | 'yellow' | 'red';
@@ -20,15 +52,6 @@ export interface SpendingStatus {
   weeklyRemaining: number;
   weeklyUsed: number;
   level: SpendingLevel;
-}
-
-export interface PacemakerAction {
-  id: string;
-  type: 'learn_content' | 'detailed_report' | 'weekly_report';
-  contentId: string;
-  title: string;
-  label: string;
-  status: 'pending' | 'completed' | 'cancelled';
 }
 
 export interface Quiz {
@@ -45,11 +68,12 @@ export interface PacemakerToday {
   date: string;
   message: string;
   grade: Grade;
+  theme: string;
+  quote: string;
   dailyVariableCost: number;
   spendingStatus: SpendingStatus;
   quizzes: Quiz[];
   quizCount: number;
-  actions: PacemakerAction[];
   disclaimer: string;
   createdAt: string;
 }

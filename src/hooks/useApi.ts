@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Constants } from '@/types/api';
+import type { Constants, AdminUsersResponse, AdminQuizzesResponse, AdminConstantUpdate } from '@/types/api';
 import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse, OnboardingRequest, OnboardingResponse } from '@/types/finance';
 import type {
   PacemakerToday,
@@ -10,6 +10,8 @@ import type {
   WrongNote,
   DailyCheck,
   DailyCheckStatus,
+  DailyChecksResponse,
+  WeeklySummary,
   DetailedReportsResponse,
   DetailedReport,
   MonthlyReportListItem,
@@ -75,17 +77,6 @@ export function useAnswerQuiz() {
   });
 }
 
-export function useCompleteAction() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (actionId: string) =>
-      api.post(`/pacemaker/actions/${actionId}/complete`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['pacemaker-today'] });
-    },
-  });
-}
-
 export function useSendFeedback() {
   return useMutation({
     mutationFn: (body: { messageId: string; type: FeedbackType; content: string }) =>
@@ -98,7 +89,15 @@ export function useSendFeedback() {
 export function useDailyChecks(month: string) {
   return useQuery({
     queryKey: ['daily-checks', month],
-    queryFn: () => api.get<DailyCheck[]>(`/pacemaker/daily-checks?month=${month}`),
+    queryFn: () => api.get<DailyChecksResponse>(`/pacemaker/daily-checks?month=${month}`),
+  });
+}
+
+export function useWeeklySummary(date: string) {
+  return useQuery({
+    queryKey: ['weekly-summary', date],
+    queryFn: () => api.get<WeeklySummary>(`/pacemaker/weekly-summary?date=${date}`),
+    enabled: !!date,
   });
 }
 
@@ -210,6 +209,33 @@ export function useToggleLearnScrap() {
     mutationFn: (id: string) => api.post(`/book/learn/${id}/scrap`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['learn-contents'] });
+    },
+  });
+}
+
+// === Admin ===
+
+export function useAdminUsers(page = 1, limit = 20) {
+  return useQuery({
+    queryKey: ['admin-users', page, limit],
+    queryFn: () => api.get<AdminUsersResponse>(`/admin/users?page=${page}&limit=${limit}`),
+  });
+}
+
+export function useAdminQuizzes() {
+  return useQuery({
+    queryKey: ['admin-quizzes'],
+    queryFn: () => api.get<AdminQuizzesResponse>('/admin/quizzes'),
+  });
+}
+
+export function useUpdateAdminConstant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      api.patch<AdminConstantUpdate>(`/admin/constants/${key}`, { value }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['constants'] });
     },
   });
 }

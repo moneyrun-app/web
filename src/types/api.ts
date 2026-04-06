@@ -15,13 +15,57 @@ export interface PaginationInfo {
   total: number;
 }
 
+export type UserRole = 'user' | 'admin';
+
 export interface User {
   id: string;
   nickname: string;
   email: string;
   marketingConsent: boolean;
   hasCompletedOnboarding: boolean;
+  role: UserRole;
   createdAt: string;
+}
+
+// === Admin ===
+
+export interface AdminUser {
+  id: string;
+  nickname: string;
+  email: string;
+  role: UserRole;
+  hasCompletedOnboarding: boolean;
+  createdAt: string;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AdminQuiz {
+  id: string;
+  question: string;
+  choices: string[];
+  correctAnswer: number;
+  briefExplanation: string;
+  detailedExplanation: string;
+  source: string;
+  category: string;
+  createdAt: string;
+}
+
+export interface AdminQuizzesResponse {
+  quizzes: AdminQuiz[];
+  total: number;
+}
+
+export interface AdminConstantUpdate {
+  key: string;
+  value: string;
+  updatedAt: string;
 }
 
 export interface AuthResponse {

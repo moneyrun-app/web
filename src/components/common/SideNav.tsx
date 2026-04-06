@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, BookOpen, User, Settings, LogOut } from 'lucide-react';
+import { Activity, BookOpen, User, Settings, LogOut, Shield } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUserStore } from '@/store/userStore';
 
@@ -15,6 +15,7 @@ const tabs = [
 export default function SideNav() {
   const pathname = usePathname();
   const logout = useUserStore((s) => s.logout);
+  const role = useUserStore((s) => s.role);
 
   const handleLogout = () => {
     logout();
@@ -50,6 +51,24 @@ export default function SideNav() {
           );
         })}
       </nav>
+
+      {/* Admin */}
+      {role === 'admin' && (
+        <div className="px-3 py-4 border-t border-border">
+          <Link
+            href="/admin"
+            aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
+              pathname.startsWith('/admin')
+                ? 'bg-red-50 text-red-600 font-medium'
+                : 'text-sub hover:bg-surface'
+            }`}
+          >
+            <Shield className="w-5 h-5" />
+            어드민
+          </Link>
+        </div>
+      )}
 
       {/* Bottom */}
       <div className="px-3 py-4 space-y-1 border-t border-border">
