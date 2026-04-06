@@ -16,6 +16,7 @@ interface SimulationState {
 }
 
 const defaultInput: SimulationInput = {
+  nickname: '',
   age: 0,
   retirementAge: 0,
   pensionStartAge: 65,

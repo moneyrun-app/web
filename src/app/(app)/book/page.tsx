@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import CategoryTabs, { type BookTab } from '@/components/book/CategoryTabs';
 import { useDetailedReports, useMonthlyReports, useScraps, useCreateScrap, useWrongNotes } from '@/hooks/useApi';
+import ReactMarkdown from 'react-markdown';
+import { decodeHtml } from '@/lib/format';
 
 export default function BookPage() {
   const router = useRouter();
@@ -106,21 +108,21 @@ export default function BookPage() {
 
                   <div className="flex gap-2 mb-2">
                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-grade-red-bg text-grade-red-text font-medium">
-                      내 답: {note.userAnswer !== undefined ? (note.userAnswer ? 'O' : 'X') : '—'}
+                      내 답: {note.choices?.[note.userAnswer - 1] ?? '—'}
                     </span>
                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-grade-green-bg text-grade-green-text font-medium">
-                      정답: {note.correctAnswer ? 'O' : 'X'}
+                      정답: {note.choices?.[note.correctAnswer - 1] ?? '—'}
                     </span>
                   </div>
 
-                  <p className="text-xs text-sub">{note.explanation}</p>
+                  <p className="text-xs text-sub">{note.briefExplanation}</p>
 
                   {expandedNote === note.id && note.detailedExplanation && (
                     <div className="mt-3 pt-3 border-t border-border">
                       <p className="text-[10px] font-semibold text-foreground mb-1.5">상세 설명</p>
-                      {note.detailedExplanation.split('\n').map((line, i) => (
-                        line.trim() ? <p key={i} className="text-xs text-sub leading-relaxed mb-1">{line}</p> : <div key={i} className="h-1.5" />
-                      ))}
+                      <div className="text-xs text-sub leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown>{note.detailedExplanation}</ReactMarkdown>
+                      </div>
                     </div>
                   )}
 
@@ -143,8 +145,8 @@ export default function BookPage() {
                     <span className="text-xs text-placeholder bg-surface px-1.5 py-0.5 rounded">{item.channel}</span>
                     <span className="text-xs text-placeholder">{item.creator}</span>
                   </div>
-                  <p className="text-sm font-semibold text-foreground mb-1.5">{item.title}</p>
-                  <p className="text-caption text-sub leading-relaxed line-clamp-2">{item.aiSummary}</p>
+                  <p className="text-sm font-semibold text-foreground mb-1.5">{decodeHtml(item.title)}</p>
+                  <p className="text-caption text-sub leading-relaxed line-clamp-2">{decodeHtml(item.aiSummary)}</p>
                   <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent mt-2 hover:underline">
                     <ExternalLink size={12} />원문 보기
                   </a>

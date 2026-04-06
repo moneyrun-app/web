@@ -70,7 +70,7 @@ export function usePacemakerToday() {
 
 export function useAnswerQuiz() {
   return useMutation({
-    mutationFn: ({ quizId, userAnswer }: { quizId: string; userAnswer: boolean }) =>
+    mutationFn: ({ quizId, userAnswer }: { quizId: string; userAnswer: number }) =>
       api.post<QuizAnswerResponse>(`/pacemaker/quiz/${quizId}/answer`, { userAnswer }),
   });
 }

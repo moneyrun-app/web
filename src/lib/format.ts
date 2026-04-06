@@ -43,3 +43,12 @@ export function formatWon(amount: number): string {
 export function formatWonRaw(amount: number): string {
   return `${amount.toLocaleString()}원`;
 }
+
+/**
+ * HTML 엔티티 디코딩 (&quot; &amp; &lt; 등 → 실제 문자)
+ */
+export function decodeHtml(html: string): string {
+  const el = document.createElement('textarea');
+  el.innerHTML = html;
+  return el.value;
+}

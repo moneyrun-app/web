@@ -34,10 +34,10 @@ export interface PacemakerAction {
 export interface Quiz {
   id: string;
   question: string;
-  answer: boolean;
-  explanation: string;
+  choices: string[];
   source: string;
   category: string;
+  wrongNoteId?: string;
 }
 
 export interface PacemakerToday {
@@ -56,7 +56,10 @@ export interface PacemakerToday {
 
 export interface QuizAnswerResponse {
   correct: boolean;
-  explanation: string;
+  correctAnswer: number;
+  userAnswer: number;
+  briefExplanation: string;
+  detailedExplanation: string;
   wrongNoteId?: string;
 }
 
@@ -64,10 +67,11 @@ export interface WrongNote {
   id: string;
   quizId: string;
   question: string;
-  userAnswer: boolean;
-  correctAnswer: boolean;
-  explanation: string;
-  detailedExplanation?: string;
+  choices: string[];
+  correctAnswer: number;
+  userAnswer: number;
+  briefExplanation: string;
+  detailedExplanation: string;
   source: string;
   category: string;
   createdAt: string;

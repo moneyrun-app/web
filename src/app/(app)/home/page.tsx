@@ -6,6 +6,7 @@ import { usePacemakerToday, useCompleteAction, useDailyChecks, useSubmitDailyChe
 import { formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
 import type { DailyCheckStatus, Quiz } from '@/types/book';
+import ReactMarkdown from 'react-markdown';
 
 /** 7일씩 나누기: 1~7, 8~14, ..., 마지막 주는 남은 일수 */
 function getMonthWeeks(now: Date) {
@@ -45,8 +46,9 @@ export default function HomePage() {
   const [checkStatus, setCheckStatus] = useState<DailyCheckStatus | null>(null);
   const [checkAmount, setCheckAmount] = useState('');
   const [quizIndex, setQuizIndex] = useState(0);
-  const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
+  const [quizResult, setQuizResult] = useState<{ correct: boolean; correctAnswer: number; userAnswer: number; briefExplanation: string; detailedExplanation: string } | null>(null);
   const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
+  const [showDetail, setShowDetail] = useState(false);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
 
   const now = new Date();
@@ -82,13 +84,13 @@ export default function HomePage() {
   }, [isLoading]);
 
   // 퀴즈 답변 처리
-  const handleQuizAnswer = (quiz: Quiz, userAnswer: boolean) => {
+  const handleQuizAnswer = (quiz: Quiz, choiceIndex: number) => {
     if (answeredIds.has(quiz.id)) return;
     answerQuiz.mutate(
-      { quizId: quiz.id, userAnswer },
+      { quizId: quiz.id, userAnswer: choiceIndex },
       {
         onSuccess: (res) => {
-          setQuizResult({ correct: res.correct, explanation: res.explanation });
+          setQuizResult({ correct: res.correct, correctAnswer: res.correctAnswer, userAnswer: res.userAnswer, briefExplanation: res.briefExplanation, detailedExplanation: res.detailedExplanation });
           setAnsweredIds((prev) => new Set(prev).add(quiz.id));
         },
       },
@@ -97,6 +99,7 @@ export default function HomePage() {
 
   const nextQuiz = () => {
     setQuizResult(null);
+    setShowDetail(false);
     setQuizIndex((i) => i + 1);
   };
 
@@ -224,14 +227,45 @@ export default function HomePage() {
 
               {quizResult ? (
                 <div className="space-y-3 animate-[fadeIn_300ms_ease-out]">
-                  <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${quizResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
-                    <span className="text-base">{quizResult.correct ? '✅' : '❌'}</span>
-                    <div>
-                      <p className={`text-xs font-semibold ${quizResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
-                        {quizResult.correct ? '정답!' : '오답!'}
-                      </p>
-                      <p className="text-xs text-sub mt-0.5">{quizResult.explanation}</p>
-                    </div>
+                  {/* 보기 결과 표시 */}
+                  <div className="space-y-2">
+                    {currentQuiz.choices.map((choice, i) => {
+                      const idx = i + 1;
+                      const isCorrect = idx === quizResult.correctAnswer;
+                      const isUserPick = idx === quizResult.userAnswer;
+                      return (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm ${
+                            isCorrect
+                              ? 'border-grade-green bg-grade-green-bg'
+                              : isUserPick
+                                ? 'border-grade-red bg-grade-red-bg'
+                                : 'border-border bg-white'
+                          }`}
+                        >
+                          <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                            isCorrect ? 'bg-grade-green text-white' : isUserPick ? 'bg-grade-red text-white' : 'bg-surface text-sub'
+                          }`}>{idx}</span>
+                          <span className={isCorrect ? 'font-semibold text-grade-green-text' : isUserPick ? 'text-grade-red-text' : 'text-sub'}>{choice}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* 설명 */}
+                  <div className={`px-3 py-2.5 rounded-xl ${quizResult.correct ? 'bg-grade-green-bg' : 'bg-grade-red-bg'}`}>
+                    <p className={`text-xs font-semibold ${quizResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
+                      {quizResult.correct ? '정답!' : '오답!'}
+                    </p>
+                    <p className="text-xs text-sub mt-0.5">{quizResult.briefExplanation}</p>
+                    {showDetail && (
+                      <div className="text-xs text-sub mt-2 leading-relaxed prose prose-sm max-w-none">
+                        <ReactMarkdown>{quizResult.detailedExplanation}</ReactMarkdown>
+                      </div>
+                    )}
+                    <button onClick={() => setShowDetail(!showDetail)} className="text-[10px] text-accent mt-1.5">
+                      {showDetail ? '접기' : '자세히 보기'}
+                    </button>
                   </div>
                   <button
                     onClick={nextQuiz}
@@ -241,21 +275,18 @@ export default function HomePage() {
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleQuizAnswer(currentQuiz, true)}
-                    disabled={answerQuiz.isPending}
-                    className="flex-1 h-12 rounded-xl text-lg font-bold bg-grade-green-bg text-grade-green-text hover:bg-grade-green/20 transition-colors disabled:opacity-50"
-                  >
-                    O
-                  </button>
-                  <button
-                    onClick={() => handleQuizAnswer(currentQuiz, false)}
-                    disabled={answerQuiz.isPending}
-                    className="flex-1 h-12 rounded-xl text-lg font-bold bg-grade-red-bg text-grade-red-text hover:bg-grade-red/20 transition-colors disabled:opacity-50"
-                  >
-                    X
-                  </button>
+                <div className="space-y-2">
+                  {currentQuiz.choices.map((choice, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleQuizAnswer(currentQuiz, i + 1)}
+                      disabled={answerQuiz.isPending}
+                      className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl border border-border bg-white text-left text-sm hover:border-accent hover:bg-accent/5 transition-colors disabled:opacity-50"
+                    >
+                      <span className="w-5 h-5 rounded-full bg-surface text-[10px] font-bold text-sub flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="text-foreground">{choice}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

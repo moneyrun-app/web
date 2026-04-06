@@ -15,9 +15,8 @@ export const mockPacemakerToday: PacemakerToday = {
   quizzes: [
     {
       id: 'quiz-001',
-      question: '적금은 중도해지하면 약정 이자를 모두 받을 수 있다',
-      answer: false,
-      explanation: '적금 중도해지 시 약정 이자가 아닌 중도해지 이자율이 적용돼요',
+      question: '적금을 중도해지하면 어떤 이자율이 적용될까?',
+      choices: ['약정 이자율', '중도해지 이자율', '기본 금리', '무이자'],
       source: '금융상식',
       category: '저축',
     },

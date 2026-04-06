@@ -26,6 +26,7 @@ export interface FinanceProfile {
 }
 
 export interface SimulationInput {
+  nickname: string;
   age: number;
   retirementAge: number;
   pensionStartAge: number;

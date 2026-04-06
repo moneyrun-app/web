@@ -54,7 +54,6 @@ function TextField({ label, value, onChange, placeholder, id }: {
 export default function LandingPage() {
   const { input, setInput, hasResult, setHasResult, loadFromSession } = useSimulationStore();
   const [showLogin, setShowLogin] = useState(false);
-  const [nickname, setNickname] = useState('');
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadFromSession(); }, [loadFromSession]);
@@ -93,13 +92,31 @@ export default function LandingPage() {
           <div className="bg-white border border-border rounded-2xl p-4 md:p-8 shadow-sm mb-6 md:mb-0">
             <h2 className="text-lg md:text-xl font-bold mb-6">내 정보 입력</h2>
             <div className="space-y-5">
-              <TextField label="닉네임" value={nickname} onChange={setNickname} placeholder="예: 민수" />
+              <TextField label="닉네임" value={input.nickname} onChange={(v) => setInput({ nickname: v })} placeholder="예: 민수" />
               <IntField label="나이" value={input.age} onChange={(v) => setInput({ age: v })} suffix="세" placeholder="만 나이" />
               <IntField label="은퇴 예정 나이" value={input.retirementAge} onChange={(v) => setInput({ retirementAge: v })} suffix="세" placeholder="예: 55" />
               <IntField label="은퇴자금 수령 나이" value={input.pensionStartAge} onChange={(v) => setInput({ pensionStartAge: v })} suffix="세" placeholder="기본 65" />
-              <IntField label="월 실수령액" value={input.monthlyIncome ? input.monthlyIncome / 10000 : 0} onChange={(v) => setInput({ monthlyIncome: Math.round(v * 10000) })} suffix="만 원" placeholder="예: 300" />
-              <IntField label="월 고정비" value={input.monthlyFixedCost ? input.monthlyFixedCost / 10000 : 0} onChange={(v) => setInput({ monthlyFixedCost: Math.round(v * 10000) })} suffix="만 원" placeholder="예: 150" />
-              <IntField label="월 변동비 (쇼핑, 술, 커피 등)" value={input.monthlyVariableCost ? input.monthlyVariableCost / 10000 : 0} onChange={(v) => setInput({ monthlyVariableCost: Math.round(v * 10000) })} suffix="만 원" placeholder="예: 100" />
+              <IntField label="월 실수령액" value={input.monthlyIncome ? input.monthlyIncome / 10000 : 0} onChange={(v) => {
+                const income = Math.round(v * 10000);
+                const updates: Partial<typeof input> = { monthlyIncome: income };
+                const total = input.monthlyFixedCost + input.monthlyVariableCost;
+                if (total > income) {
+                  const ratio = income > 0 ? income / total : 0;
+                  updates.monthlyFixedCost = Math.floor(input.monthlyFixedCost * ratio);
+                  updates.monthlyVariableCost = Math.floor(input.monthlyVariableCost * ratio);
+                }
+                setInput(updates);
+              }} suffix="만 원" placeholder="예: 300" />
+              <IntField label="월 고정비" value={input.monthlyFixedCost ? input.monthlyFixedCost / 10000 : 0} onChange={(v) => {
+                const won = Math.round(v * 10000);
+                const max = input.monthlyIncome - input.monthlyVariableCost;
+                setInput({ monthlyFixedCost: Math.min(won, Math.max(0, max)) });
+              }} suffix="만 원" placeholder="예: 150" />
+              <IntField label="월 변동비 (쇼핑, 술, 커피 등)" value={input.monthlyVariableCost ? input.monthlyVariableCost / 10000 : 0} onChange={(v) => {
+                const won = Math.round(v * 10000);
+                const max = input.monthlyIncome - input.monthlyFixedCost;
+                setInput({ monthlyVariableCost: Math.min(won, Math.max(0, max)) });
+              }} suffix="만 원" placeholder="예: 100" />
 
               {/* 자동 계산 요약 */}
               {input.monthlyIncome > 0 && (
