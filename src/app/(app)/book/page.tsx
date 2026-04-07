@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2, CalendarPlus } from 'lucide-react';
+import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import CategoryTabs, { type BookTab } from '@/components/book/CategoryTabs';
 import MonthlyReportCreate from '@/components/book/MonthlyReportCreate';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -14,7 +14,7 @@ export default function BookPage() {
   const router = useRouter();
   const [tab, setTab] = useState<BookTab>('detailed');
   const [showScrapModal, setShowScrapModal] = useState(false);
-  const [showMonthlyCreate, setShowMonthlyCreate] = useState(false);
+  const [monthlyCreateMonth, setMonthlyCreateMonth] = useState<string | null>(null);
   const [scrapUrl, setScrapUrl] = useState('');
 
   const { data: reports, isLoading: reportsLoading } = useDetailedReports(tab === 'detailed');
@@ -54,18 +54,17 @@ export default function BookPage() {
             {reportsLoading ? <Skeleton /> : (
               <div className="space-y-4">
                 {(reports?.items ?? []).map((item) => (
-                  <div key={item.id} className="bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm">
-                    <p className="text-xs text-placeholder mb-1.5">{(item.analyzedAt || item.createdAt).split('T')[0].replace(/-/g, '.')} 분석</p>
-                    <p className="text-sm font-semibold text-foreground mb-2">{item.title}</p>
+                  <div key={item.id} className="bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <p className="text-caption text-sub leading-relaxed truncate flex-1">{item.summary}</p>
-                      <button
-                        onClick={() => router.push(`/book/${item.id}?type=detailed`)}
-                        className="inline-flex items-center gap-1 h-9 px-3 text-xs font-medium rounded-lg bg-accent text-background hover:opacity-90 transition-opacity shrink-0"
-                      >
-                        <FileText size={12} />상세보기
-                      </button>
+                      <p className="text-xs text-placeholder">{(item.analyzedAt || item.createdAt).split('T')[0].replace(/-/g, '.')}</p>
+                      <p className="text-sm font-semibold text-foreground">시뮬레이터 상세 리포트</p>
                     </div>
+                    <button
+                      onClick={() => router.push(`/book/${item.id}?type=detailed`)}
+                      className="inline-flex items-center gap-1 h-9 px-3 text-xs font-medium rounded-lg bg-accent text-background hover:opacity-90 transition-opacity shrink-0"
+                    >
+                      <FileText size={12} />상세보기
+                    </button>
                   </div>
                 ))}
                 {(reports?.items ?? []).length === 0 && (
@@ -76,26 +75,36 @@ export default function BookPage() {
 
             {/* 구분선 + 월간 리포트 */}
             <div className="border-t border-border pt-4 mt-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-foreground">월간 리포트</p>
-                <button
-                  onClick={() => setShowMonthlyCreate(true)}
-                  className="inline-flex items-center gap-1 h-8 px-3 text-xs font-medium rounded-lg border border-accent text-accent hover:bg-accent/5 transition-colors"
-                >
-                  <CalendarPlus size={14} />
-                  이번 달 만들기
-                </button>
-              </div>
+              <p className="text-sm font-semibold text-foreground mb-3">월간 리포트</p>
               {monthlyLoading ? <Skeleton /> : (
                 <div className="space-y-3">
-                  {(monthlyReports ?? []).map((item) => (
-                    <button key={item.id} onClick={() => router.push(`/book/${item.id}?type=monthly`)} className="w-full text-left bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm hover:border-accent transition-colors">
-                      <p className="text-xs text-placeholder mb-1.5">{item.month}</p>
-                      <p className="text-sm font-semibold text-foreground mb-1">{item.summary}</p>
-                    </button>
-                  ))}
+                  {(monthlyReports ?? []).map((item) => {
+                    const isPending = 'status' in item && item.status === 'pending';
+                    return (
+                      <div key={item.id} className="bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">
+                          {item.month} 리포트{isPending ? ' · 생성 대기 중' : ''}
+                        </p>
+                        {isPending ? (
+                          <button
+                            onClick={() => setMonthlyCreateMonth(item.month)}
+                            className="inline-flex items-center gap-1 h-9 px-4 text-xs font-semibold rounded-lg bg-accent text-white hover:opacity-90 transition-opacity shrink-0"
+                          >
+                            리포트 생성하기
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => router.push(`/book/${item.id}?type=monthly`)}
+                            className="inline-flex items-center gap-1 h-9 px-3 text-xs font-medium rounded-lg bg-accent text-background hover:opacity-90 transition-opacity shrink-0"
+                          >
+                            <FileText size={12} />상세보기
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                   {(monthlyReports ?? []).length === 0 && (
-                    <p className="text-sub text-center py-12">다음 달부터 월간 리포트를 보여드릴게요</p>
+                    <p className="text-sub text-center py-12">페이스메이커에서 소비를 확정하면 월간 리포트를 만들 수 있어요</p>
                   )}
                 </div>
               )}
@@ -185,11 +194,12 @@ export default function BookPage() {
       </button>
 
       {/* Monthly Report Create Modal */}
-      {showMonthlyCreate && (
+      {monthlyCreateMonth && (
         <MonthlyReportCreate
-          onClose={() => setShowMonthlyCreate(false)}
+          month={monthlyCreateMonth}
+          onClose={() => setMonthlyCreateMonth(null)}
           onCreated={(id) => {
-            setShowMonthlyCreate(false);
+            setMonthlyCreateMonth(null);
             router.push(`/book/${id}?type=monthly`);
           }}
         />

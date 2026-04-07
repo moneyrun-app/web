@@ -2,6 +2,30 @@
 
 export type OverallFeeling = 'good' | 'okay' | 'tight' | 'bad';
 
+// --- 확정 상태 (GET /pacemaker/monthly-finalize-status) ---
+
+export interface MonthlyFinalizeStatus {
+  currentMonth: {
+    month: string;
+    finalized: boolean;
+    isLastDay: boolean;
+    reportId: string | null;
+  };
+  pendingReport: {
+    month: string;
+    reportId: string | null;
+  } | null;
+  unfinalizedMonths: string[];
+}
+
+// --- 확정 응답 (POST /pacemaker/monthly-finalize) ---
+
+export interface MonthlyFinalizeResponse {
+  finalized: string;
+  autoFinalized: string[];
+  expiredReport: string | null;
+}
+
 // --- POST /book/monthly-reports 요청 ---
 
 export interface ProposalCheck {
@@ -10,6 +34,7 @@ export interface ProposalCheck {
 }
 
 export interface CreateMonthlyReportRequest {
+  month: string;
   overallFeeling: OverallFeeling;
   memo: string;
   proposalChecks: ProposalCheck[];
@@ -168,10 +193,12 @@ export interface MonthlyReportV2 {
   createdAt: string;
 }
 
-// 목록 아이템 (기존 유지)
+// 목록 아이템
 export interface MonthlyReportV2ListItem {
   id: string;
   month: string;
   summary: string;
+  status: 'pending' | 'created';
+  badgesEarned?: BadgeEarned[];
   createdAt: string;
 }

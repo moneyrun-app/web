@@ -13,11 +13,12 @@ const feelings: { value: OverallFeeling; emoji: string; label: string }[] = [
 ];
 
 interface Props {
+  month: string; // "2026-03" 형식
   onClose: () => void;
   onCreated: (id: string) => void;
 }
 
-export default function MonthlyReportCreate({ onClose, onCreated }: Props) {
+export default function MonthlyReportCreate({ month, onClose, onCreated }: Props) {
   const [step, setStep] = useState(0); // 0: feeling, 1: proposals, 2: memo
   const [feeling, setFeeling] = useState<OverallFeeling | null>(null);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -37,7 +38,7 @@ export default function MonthlyReportCreate({ onClose, onCreated }: Props) {
       checked: checks[p.id] ?? false,
     }));
     createReport.mutate(
-      { overallFeeling: feeling, memo, proposalChecks },
+      { month, overallFeeling: feeling, memo, proposalChecks },
       { onSuccess: (data) => onCreated(data.id) },
     );
   };
@@ -56,7 +57,7 @@ export default function MonthlyReportCreate({ onClose, onCreated }: Props) {
               </button>
             )}
             <h2 className="text-base font-bold">
-              {step === 0 && '이번 달 어땠어?'}
+              {step === 0 && `${month.split('-')[1]}월, 어땠어?`}
               {step === 1 && '제안 이행 체크'}
               {step === 2 && '한 줄 메모'}
             </h2>
@@ -100,7 +101,7 @@ export default function MonthlyReportCreate({ onClose, onCreated }: Props) {
           {/* Step 1: Proposal Checks */}
           {step === 1 && (
             <div className="space-y-3 pt-2">
-              <p className="text-sm text-sub mb-4">지난 리포트에서 제안한 항목이야. 이행한 건 체크해줘!</p>
+              <p className="text-sm text-sub mb-4">상세 리포트에서 제안한 항목이야. 이번 달에 실천한 건 체크해줘!</p>
               {proposalsLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-surface rounded-xl animate-pulse" />)}

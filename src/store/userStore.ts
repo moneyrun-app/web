@@ -9,6 +9,7 @@ interface UserState {
   email: string;
   hasCompletedOnboarding: boolean;
   role: UserRole;
+  createdAt: string;
   isLoggedIn: boolean;
   setUser: (user: Partial<UserState>) => void;
   logout: () => void;
@@ -20,6 +21,7 @@ export const useUserStore = create<UserState>((set) => ({
   email: '',
   hasCompletedOnboarding: false,
   role: 'user',
+  createdAt: '',
   isLoggedIn: false,
   setUser: (user) => set((state) => ({ ...state, ...user })),
   logout: () => {
@@ -32,6 +34,7 @@ export const useUserStore = create<UserState>((set) => ({
       email: '',
       hasCompletedOnboarding: false,
       role: 'user',
+      createdAt: '',
       isLoggedIn: false,
     });
   },

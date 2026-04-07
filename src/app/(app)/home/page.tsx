@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useFinanceStore } from '@/store/financeStore';
-import { usePacemakerToday, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz } from '@/hooks/useApi';
+import { usePacemakerToday, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz, useMonthlyFinalizeStatus, useMonthlyFinalize, useCancelFinalize } from '@/hooks/useApi';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
 import type { DailyCheckStatus, Quiz } from '@/types/book';
 import Markdown from '@/components/common/Markdown';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Unlock, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 /* ─── TrackWeek (memo) ─── */
 
@@ -96,9 +97,9 @@ const TrackWeek = memo(function TrackWeek({
   );
 });
 
-// 트랙 시작 월 (나중에 배포 시점 월로 변경)
-const TRACK_START_YEAR = 2026;
-const TRACK_START_MONTH = 2; // 0-indexed: 2 = 3월
+// 트랙 시작 월 폴백 (유저 가입일 없을 때)
+const TRACK_FALLBACK_YEAR = 2026;
+const TRACK_FALLBACK_MONTH = 0; // 0-indexed: 0 = 1월
 
 /** 7일씩 나누기: 1~7, 8~14, ..., 마지막 주는 남은 일수 */
 function getMonthWeeks(year: number, month: number) {
@@ -127,6 +128,7 @@ function toDateStr(d: Date) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const { variableCost } = useFinanceStore();
   const { data: pm, isLoading, error } = usePacemakerToday();
   const answerQuiz = useAnswerQuiz();
@@ -140,6 +142,14 @@ export default function HomePage() {
   const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set());
   const [showDetail, setShowDetail] = useState(false);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
+  const [trackKey, setTrackKey] = useState(0);
+
+  // 확정 관련
+  const { data: finalizeStatus } = useMonthlyFinalizeStatus();
+  const finalizeMut = useMonthlyFinalize();
+  const cancelFinalizeMut = useCancelFinalize();
+  const [showFinalizeModal, setShowFinalizeModal] = useState<'confirm' | 'warning' | 'cancel' | null>(null);
 
   const now = new Date();
   const todayDate = now.getDate();
@@ -150,7 +160,12 @@ export default function HomePage() {
   const [trackYear, setTrackYear] = useState(currentYear);
   const [trackMonth, setTrackMonth] = useState(currentMonth);
   const isCurrentMonth = trackYear === currentYear && trackMonth === currentMonth;
-  const isStartMonth = trackYear === TRACK_START_YEAR && trackMonth === TRACK_START_MONTH;
+  // 트랙 시작월: unfinalizedMonths의 가장 빠른 월 또는 currentMonth
+  const earliestMonth = (finalizeStatus?.unfinalizedMonths ?? []).length > 0
+    ? finalizeStatus!.unfinalizedMonths[0]
+    : finalizeStatus?.currentMonth.month ?? `${TRACK_FALLBACK_YEAR}-${String(TRACK_FALLBACK_MONTH + 1).padStart(2, '0')}`;
+  const [startY, startM] = earliestMonth.split('-').map(Number);
+  const isStartMonth = trackYear === startY && trackMonth === startM - 1;
 
   const today = isCurrentMonth ? todayDate : 0; // 현재 월이 아니면 today 하이라이트 없음
   const { weeks } = getMonthWeeks(trackYear, trackMonth);
@@ -159,6 +174,8 @@ export default function HomePage() {
 
   const goToPrevMonth = useCallback(() => {
     if (isStartMonth) return;
+    setSlideDir('right');
+    setTrackKey((k) => k + 1);
     setTrackMonth((m) => {
       if (m === 0) { setTrackYear((y) => y - 1); return 11; }
       return m - 1;
@@ -167,6 +184,8 @@ export default function HomePage() {
 
   const goToNextMonth = useCallback(() => {
     if (isCurrentMonth) return;
+    setSlideDir('left');
+    setTrackKey((k) => k + 1);
     setTrackMonth((m) => {
       if (m === 11) { setTrackYear((y) => y + 1); return 0; }
       return m + 1;
@@ -309,23 +328,154 @@ export default function HomePage() {
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        {weeks.map((week, wi) => (
-          <TrackWeek
-            key={wi}
-            week={week}
-            wi={wi}
-            month={month}
-            year={year}
-            today={today}
-            isCurrentMonth={isCurrentMonth}
-            todayDate={todayDate}
-            hoverDay={hoverDay}
-            checkMap={checkMap}
-            variableCost={variableCost}
-            onCheckDate={setCheckDate}
-            onHoverDay={setHoverDay}
-          />
-        ))}
+        <div
+          key={trackKey}
+          className="overflow-hidden"
+          style={{
+            animation: slideDir
+              ? `${slideDir === 'left' ? 'slideInLeft' : 'slideInRight'} 250ms ease-out`
+              : undefined,
+          }}
+        >
+        {(() => {
+          // 현재 보고 있는 트랙 월의 확정 상태 판단
+          const viewingMonthStr = `${trackYear}-${String(trackMonth + 1).padStart(2, '0')}`;
+          const isViewingCurrentMonth = finalizeStatus?.currentMonth.month === viewingMonthStr;
+          const isViewingFinalized = isViewingCurrentMonth
+            ? finalizeStatus?.currentMonth.finalized
+            : !(finalizeStatus?.unfinalizedMonths ?? []).includes(viewingMonthStr);
+          const isViewingReportCreated = isViewingCurrentMonth
+            ? !!finalizeStatus?.currentMonth.reportId
+            : false;
+          // 과거 월이고 unfinalizedMonths에 없으면 확정된 것
+          const isPastMonth = !isCurrentMonth;
+          const isPastUnfinalized = isPastMonth && (finalizeStatus?.unfinalizedMonths ?? []).includes(viewingMonthStr);
+
+          return weeks.map((week, wi) => (
+            <TrackWeek
+              key={wi}
+              week={week}
+              wi={wi}
+              month={month}
+              year={year}
+              today={today}
+              isCurrentMonth={isCurrentMonth}
+              todayDate={todayDate}
+              hoverDay={hoverDay}
+              checkMap={checkMap}
+              variableCost={variableCost}
+              onCheckDate={(day) => {
+                // 확정된 월은 tile 클릭 차단 (리포트 생성 전이면 취소 안내)
+                if (isViewingFinalized && !isViewingReportCreated) {
+                  setShowFinalizeModal('cancel');
+                  return;
+                }
+                if (isViewingFinalized && isViewingReportCreated) {
+                  return; // 리포트 생성 후 완전 차단
+                }
+                setCheckDate(day);
+              }}
+              onHoverDay={setHoverDay}
+            />
+          ));
+        })()}
+
+        {/* 확정 버튼 영역 */}
+        {finalizeStatus && (() => {
+          const viewingMonthStr = `${trackYear}-${String(trackMonth + 1).padStart(2, '0')}`;
+          const isViewingCurrentMonth = finalizeStatus.currentMonth.month === viewingMonthStr;
+          const currentFinalized = isViewingCurrentMonth && finalizeStatus.currentMonth.finalized;
+          const currentReportCreated = isViewingCurrentMonth && !!finalizeStatus.currentMonth.reportId;
+          const unfinalized = finalizeStatus.unfinalizedMonths ?? [];
+
+          // 과거 월을 보고 있고 미확정이면 확정 가능
+          const isPastMonth = !isCurrentMonth;
+          const isPastUnfinalized = isPastMonth && unfinalized.includes(viewingMonthStr);
+          // 과거 월을 보고 있고 확정됐으면 (unfinalizedMonths에 없음)
+          const isPastFinalized = isPastMonth && !unfinalized.includes(viewingMonthStr);
+          // 과거 확정 월의 리포트 상태: pendingReport와 매칭
+          const isPastPendingReport = isPastFinalized && finalizeStatus.pendingReport?.month === viewingMonthStr;
+
+          // 당월: 말일이고 미확정일 때만
+          // 과거: 미확정이면 언제든 가능
+          const canFinalize = (isViewingCurrentMonth && finalizeStatus.currentMonth.isLastDay && !currentFinalized) || isPastUnfinalized;
+          // 당월 확정 취소
+          const canCancelFinalize = (currentFinalized && !currentReportCreated) || isPastPendingReport;
+          const pendingReport = finalizeStatus.pendingReport;
+
+          return (
+            <div className="mt-4 pt-3 border-t border-border">
+              {/* 당월 뷰에서 과거 미확정 월 알림 */}
+              {isViewingCurrentMonth && unfinalized.length > 0 && (
+                <div className="bg-grade-yellow-bg rounded-xl p-3 mb-3">
+                  <p className="text-xs font-medium text-grade-yellow-text mb-1">미확정 월이 있어요</p>
+                  <p className="text-xs text-sub">
+                    {unfinalized.map((m) => {
+                      const [, mm] = m.split('-');
+                      return `${parseInt(mm)}월`;
+                    }).join(', ')}의 소비가 아직 확정되지 않았어요.
+                  </p>
+                  <button
+                    onClick={() => {
+                      // 가장 오래된 미확정 월로 이동
+                      const oldest = unfinalized[0];
+                      const [y, m] = oldest.split('-').map(Number);
+                      setTrackYear(y);
+                      setTrackMonth(m - 1);
+                    }}
+                    className="text-xs text-accent font-medium mt-1.5 hover:underline"
+                  >
+                    확정하러 가기
+                  </button>
+                </div>
+              )}
+
+              {/* 확정됨 + 리포트 미생성 → 확정 취소 가능 */}
+              {canCancelFinalize && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Lock size={14} className="text-accent" />
+                    <span className="text-xs text-sub">확정됨 · 리포트 생성 대기 중</span>
+                  </div>
+                  <button
+                    onClick={() => setShowFinalizeModal('cancel')}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    확정 취소
+                  </button>
+                </div>
+              )}
+
+              {/* 확정됨 + 리포트 생성 완료 */}
+              {((currentFinalized && currentReportCreated) || (isPastFinalized && !isPastPendingReport)) && (
+                <div className="flex items-center gap-1.5">
+                  <Lock size={14} className="text-grade-green-text" />
+                  <span className="text-xs text-sub">확정 완료{isPastFinalized && !isPastPendingReport ? '' : ' · 리포트 생성됨'}</span>
+                </div>
+              )}
+
+              {/* 확정 버튼 */}
+              {canFinalize && (
+                <button
+                  onClick={() => {
+                    // 현재 확정하려는 월보다 이전인 미확정 월만 자동확정 대상
+                    const priorUnfinalized = unfinalized.filter((m) => m < viewingMonthStr);
+                    if (priorUnfinalized.length > 0 || pendingReport) {
+                      setShowFinalizeModal('warning');
+                    } else {
+                      setShowFinalizeModal('confirm');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold border border-accent text-accent hover:bg-accent/5 transition-colors"
+                >
+                  <Lock size={12} />
+                  {isCurrentMonth ? '이번 달 소비 확정' : `${trackMonth + 1}월 소비 확정`}
+                </button>
+              )}
+            </div>
+          );
+        })()}
+        </div>
       </section>
 
       {/* 오늘의 퀴즈 */}
@@ -383,7 +533,7 @@ export default function HomePage() {
                     <p className={`text-xs font-semibold ${quizResult.correct ? 'text-grade-green-text' : 'text-grade-red-text'}`}>
                       {quizResult.correct ? '정답!' : '오답!'}
                     </p>
-                    <p className="text-xs text-sub mt-0.5">{quizResult.briefExplanation}</p>
+                    <div className="text-xs text-sub mt-0.5 prose prose-sm max-w-none"><Markdown>{quizResult.briefExplanation}</Markdown></div>
                     {showDetail && (
                       <div className="text-xs text-sub mt-2 leading-relaxed prose prose-sm max-w-none">
                         <Markdown>{quizResult.detailedExplanation}</Markdown>
@@ -420,6 +570,133 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* 확정 모달 */}
+      {showFinalizeModal && finalizeStatus && (() => {
+        const viewingMonthStr = `${trackYear}-${String(trackMonth + 1).padStart(2, '0')}`;
+        const viewingLabel = `${trackMonth + 1}월`;
+        // 현재 확정하려는 월보다 이전 미확정 월만 (자동확정 대상)
+        const priorUnfinalized = (finalizeStatus.unfinalizedMonths ?? []).filter((m) => m < viewingMonthStr);
+        const pending = finalizeStatus.pendingReport;
+
+        return (
+          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center px-4 pb-20 md:pb-4">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowFinalizeModal(null)} />
+            <div className="relative bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 animate-[slideUp_300ms_ease-out] space-y-4">
+
+              {/* 확정 확인 */}
+              {showFinalizeModal === 'confirm' && (
+                <>
+                  <h3 className="text-base font-bold">{viewingLabel} 소비 확정</h3>
+                  <p className="text-sm text-sub">확정하면 {viewingLabel} 데일리 기록을 수정할 수 없어요. 월간 리포트를 생성할 수 있게 됩니다.</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowFinalizeModal(null)} className="flex-1 h-11 rounded-xl text-sm font-medium bg-surface text-foreground">
+                      취소
+                    </button>
+                    <button
+                      onClick={() => {
+                        finalizeMut.mutate({ month: viewingMonthStr }, {
+                          onSuccess: () => setShowFinalizeModal(null),
+                        });
+                      }}
+                      disabled={finalizeMut.isPending}
+                      className="flex-1 h-11 rounded-xl text-sm font-semibold bg-accent text-white disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {finalizeMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                      확정하기
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* 경고: 미확정 월 + 미생성 리포트 */}
+              {showFinalizeModal === 'warning' && (
+                <>
+                  <h3 className="text-base font-bold">확인이 필요해요</h3>
+
+                  {priorUnfinalized.length > 0 && (
+                    <div className="bg-grade-yellow-bg rounded-xl p-3">
+                      <p className="text-sm font-medium text-grade-yellow-text mb-1">미확정 월 자동 확정</p>
+                      <p className="text-xs text-sub">
+                        {priorUnfinalized.map((m) => {
+                          const mm = parseInt(m.split('-')[1]);
+                          return `${mm}월`;
+                        }).join(', ')}이 함께 확정됩니다.
+                      </p>
+                    </div>
+                  )}
+
+                  {pending && (
+                    <div className="bg-grade-red-bg rounded-xl p-3">
+                      <p className="text-sm font-medium text-grade-red-text mb-1">미생성 리포트 소멸</p>
+                      <p className="text-xs text-sub">
+                        {pending.month.split('-')[1]}월 리포트를 아직 생성하지 않았어요. 지금 확정하면 해당 리포트는 사라져요.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowFinalizeModal(null)} className="flex-1 h-11 rounded-xl text-sm font-medium bg-surface text-foreground">
+                      취소
+                    </button>
+                    <button
+                      onClick={() => {
+                        finalizeMut.mutate({ month: viewingMonthStr }, {
+                          onSuccess: () => setShowFinalizeModal(null),
+                        });
+                      }}
+                      disabled={finalizeMut.isPending}
+                      className="flex-1 h-11 rounded-xl text-sm font-semibold bg-accent text-white disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {finalizeMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                      확정하기
+                    </button>
+                  </div>
+                  {pending && (
+                    <button
+                      onClick={() => {
+                        setShowFinalizeModal(null);
+                        router.push('/book');
+                      }}
+                      className="w-full text-xs text-sub text-center py-1 hover:text-foreground transition-colors"
+                    >
+                      {parseInt(pending.month.split('-')[1])}월 리포트 먼저 만들기
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* 확정 취소 */}
+              {showFinalizeModal === 'cancel' && (
+                <>
+                  <h3 className="text-base font-bold">확정 취소</h3>
+                  <p className="text-sm text-sub">확정을 취소하면 데일리 기록을 다시 수정할 수 있어요. 수정 후 다시 확정해주세요.</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowFinalizeModal(null)} className="flex-1 h-11 rounded-xl text-sm font-medium bg-surface text-foreground">
+                      닫기
+                    </button>
+                    <button
+                      onClick={() => {
+                        const monthToCancel = finalizeStatus.currentMonth.finalized
+                          ? finalizeStatus.currentMonth.month
+                          : viewingMonthStr;
+                        cancelFinalizeMut.mutate({ month: monthToCancel }, {
+                          onSuccess: () => setShowFinalizeModal(null),
+                        });
+                      }}
+                      disabled={cancelFinalizeMut.isPending}
+                      className="flex-1 h-11 rounded-xl text-sm font-semibold bg-grade-red-text text-white disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {cancelFinalizeMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Unlock size={14} />}
+                      확정 취소
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 일별 체크 모달 */}
       {checkDate !== null && (() => {

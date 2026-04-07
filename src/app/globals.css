@@ -163,6 +163,16 @@ textarea.border:focus {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 /* 다크모드 — 클래스 기반 토글 */
 html.dark {
     --background: #141414;

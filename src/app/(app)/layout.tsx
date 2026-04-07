@@ -75,6 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           email: data.user.email ?? '',
           hasCompletedOnboarding: data.user.hasCompletedOnboarding,
           role: data.user.role ?? 'user',
+          createdAt: data.user.createdAt ?? '',
           isLoggedIn: true,
         });
 
@@ -227,8 +228,8 @@ function syncUser(jwt: string) {
   }).catch(() => {});
 
   api.get<{
-    id: string; nickname: string; email: string; hasCompletedOnboarding: boolean; role?: string;
+    id: string; nickname: string; email: string; hasCompletedOnboarding: boolean; role?: string; createdAt?: string;
   }>('/users/me').then((user) => {
-    useUserStore.getState().setUser({ ...user, role: (user.role as 'user' | 'admin') ?? 'user', isLoggedIn: true });
+    useUserStore.getState().setUser({ ...user, role: (user.role as 'user' | 'admin') ?? 'user', createdAt: user.createdAt ?? '', isLoggedIn: true });
   }).catch(() => {});
 }

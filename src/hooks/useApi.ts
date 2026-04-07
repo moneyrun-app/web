@@ -26,6 +26,8 @@ import type {
   CreateMonthlyReportRequest,
   MonthlyReportV2,
   MonthlyReportV2ListItem,
+  MonthlyFinalizeStatus,
+  MonthlyFinalizeResponse,
 } from '@/types/monthly-report-v2';
 
 // === Constants (비로그인) ===
@@ -113,6 +115,40 @@ export function useSubmitDailyCheck() {
     mutationFn: (body: { date: string; status: DailyCheckStatus; amount: number }) =>
       api.post<DailyCheck>('/pacemaker/daily-check', body),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['daily-checks'] });
+    },
+  });
+}
+
+// === Monthly Finalize (확정) ===
+
+export function useMonthlyFinalizeStatus() {
+  return useQuery({
+    queryKey: ['monthly-finalize-status'],
+    queryFn: () => api.get<MonthlyFinalizeStatus>('/pacemaker/monthly-finalize-status'),
+  });
+}
+
+export function useMonthlyFinalize() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { month: string }) =>
+      api.post<MonthlyFinalizeResponse>('/pacemaker/monthly-finalize', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['monthly-finalize-status'] });
+      qc.invalidateQueries({ queryKey: ['daily-checks'] });
+      qc.invalidateQueries({ queryKey: ['monthly-reports'] });
+    },
+  });
+}
+
+export function useCancelFinalize() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { month: string }) =>
+      api.post('/pacemaker/monthly-finalize/cancel', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['monthly-finalize-status'] });
       qc.invalidateQueries({ queryKey: ['daily-checks'] });
     },
   });
