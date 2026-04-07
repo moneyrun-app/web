@@ -12,6 +12,7 @@ import {
   InvestmentPyramid, PortfolioSuggestion, Disclaimer,
 } from '@/components/book/ReportSections';
 import V6ReportDetail from '@/components/book/V6ReportDetail';
+import MonthlyReportV2Detail from '@/components/book/MonthlyReportV2Detail';
 import type { V6Report } from '@/types/report-v6';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,8 +169,16 @@ export default function BookDetailPage() {
     );
   }
 
-  // === Monthly Report (마크다운 기반) ===
+  // === Monthly Report V2 ===
   if (isMonthly && monthly) {
+    // v2: sections 객체가 있으면 새 뷰어 사용
+    const hasV2Sections = monthly && 'sections' in monthly && typeof monthly.sections === 'object' && monthly.sections !== null && 'spending' in monthly.sections;
+    if (hasV2Sections) {
+      return <MonthlyReportV2Detail report={monthly as import('@/types/monthly-report-v2').MonthlyReportV2} onBack={() => router.back()} />;
+    }
+
+    // 레거시 폴백 (기존 마크다운 기반)
+    const legacy = monthly as import('@/types/book').MonthlyReport;
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -177,26 +186,26 @@ export default function BookDetailPage() {
             <ArrowLeft size={20} />
           </button>
         </div>
-        <h1 className="text-xl md:text-2xl font-bold mb-2">{monthly.month} 월간 리포트</h1>
-        {monthly.monthlyStats && (
+        <h1 className="text-xl md:text-2xl font-bold mb-2">{legacy.month} 월간 리포트</h1>
+        {legacy.monthlyStats && (
           <div className="flex gap-3 mb-4">
             <div className="flex-1 bg-grade-green-bg rounded-xl p-3 text-center">
               <p className="text-xs text-sub mb-0.5">절약</p>
-              <p className="text-lg font-bold text-grade-green-text">{monthly.monthlyStats.greenDays}일</p>
+              <p className="text-lg font-bold text-grade-green-text">{legacy.monthlyStats.greenDays}일</p>
             </div>
             <div className="flex-1 bg-grade-yellow-bg rounded-xl p-3 text-center">
               <p className="text-xs text-sub mb-0.5">보통</p>
-              <p className="text-lg font-bold text-grade-yellow-text">{monthly.monthlyStats.yellowDays}일</p>
+              <p className="text-lg font-bold text-grade-yellow-text">{legacy.monthlyStats.yellowDays}일</p>
             </div>
             <div className="flex-1 bg-grade-red-bg rounded-xl p-3 text-center">
               <p className="text-xs text-sub mb-0.5">과소비</p>
-              <p className="text-lg font-bold text-grade-red-text">{monthly.monthlyStats.redDays}일</p>
+              <p className="text-lg font-bold text-grade-red-text">{legacy.monthlyStats.redDays}일</p>
             </div>
           </div>
         )}
         <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 pb-8">
           {(() => {
-            const lines = monthly.guide.split('\n');
+            const lines = legacy.guide.split('\n');
             const elements: React.ReactNode[] = [];
             let i = 0;
             while (i < lines.length) {

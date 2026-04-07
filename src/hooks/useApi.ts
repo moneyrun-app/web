@@ -21,6 +21,12 @@ import type {
   LearnContent,
   FeedbackType,
 } from '@/types/book';
+import type {
+  ProposalItem,
+  CreateMonthlyReportRequest,
+  MonthlyReportV2,
+  MonthlyReportV2ListItem,
+} from '@/types/monthly-report-v2';
 
 // === Constants (비로그인) ===
 
@@ -146,7 +152,7 @@ export function useDetailedReport(id: string) {
 export function useMonthlyReports(enabled = true) {
   return useQuery({
     queryKey: ['monthly-reports'],
-    queryFn: () => api.get<MonthlyReportListItem[]>('/book/monthly-reports'),
+    queryFn: () => api.get<MonthlyReportV2ListItem[]>('/book/monthly-reports'),
     enabled,
   });
 }
@@ -154,8 +160,26 @@ export function useMonthlyReports(enabled = true) {
 export function useMonthlyReport(id: string) {
   return useQuery({
     queryKey: ['monthly-report', id],
-    queryFn: () => api.get<MonthlyReport>(`/book/monthly-reports/${id}`),
+    queryFn: () => api.get<MonthlyReportV2 | MonthlyReport>(`/book/monthly-reports/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useMonthlyReportProposals() {
+  return useQuery({
+    queryKey: ['monthly-report-proposals'],
+    queryFn: () => api.get<ProposalItem[]>('/book/monthly-reports/proposals'),
+  });
+}
+
+export function useCreateMonthlyReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateMonthlyReportRequest) =>
+      api.post<MonthlyReportV2>('/book/monthly-reports', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['monthly-reports'] });
+    },
   });
 }
 

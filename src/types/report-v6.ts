@@ -16,9 +16,10 @@ export interface SectionA {
   grade: Grade;
   scores: ScoreAxis[];
   peerComparison: {
-    myScore: number;
-    peerAvg: number;
     ageGroup: string;
+    expenseRatio: { user: number; peer: number };
+    surplusRatio: { user: number; peer: number };
+    variableRatio: { user: number; peer: number };
   };
   chart: {
     type: string;
@@ -40,54 +41,63 @@ export interface SectionB {
     surplus: number;
   };
   ratios: {
-    user: { fixedCost: number; variableCost: number; surplus: number };
-    peer: { fixedCost: number; variableCost: number; surplus: number };
+    user: { fixed: number; variable: number; surplus: number };
+    peer: { fixed: number; variable: number; surplus: number };
   };
   peerAgeGroup: string;
-  charts: {
-    waterfall: { labels: string[]; values: number[] };
-    comparison: { labels: string[]; user: number[]; peer: number[] };
-  };
+  charts: Record<string, unknown>;
   ai_narrative: string;
 }
 
 // === Section C: 통합 시뮬레이션 ===
 
 export interface LifeEvent {
-  age: number;
   name: string;
   cost: number;
   icon?: string;
 }
 
 export interface ScenarioData {
-  label: string;
-  trajectory: { age: number; asset: number }[];
+  name: string;
+  rate: number;
+  projections: Record<string, number>;
 }
 
 export interface SectionC {
   section: 'C';
   title: string;
   timeline: {
-    accumulationStart: number;
-    accumulationEnd: number;
-    gapStart: number;
-    gapEnd: number;
-    pensionStart: number;
+    currentAge: number;
+    retirementAge: number;
+    vestingPeriod: number;
+    pensionStartAge: number;
+    investmentPeriod: number;
   };
   scenarios: ScenarioData[];
   lifeEvents: LifeEvent[];
   totalEventCost: number;
-  netAfterEvents: number;
+  netAfterEvents: Record<string, number>;
   retirement: {
-    targetMonthly: number;
-    projectedMonthly: number;
-    gap: number;
+    monthlyShortfall: number;
+    nationalPensionMonthly: number;
+    gapFundMin: number;
+    gapFundComfort: number;
   };
   charts: {
-    assetGrowth: { scenarios: ScenarioData[] };
-    timeline: { phases: { label: string; start: number; end: number; color: string }[] };
-    gapBar: { target: number; projected: number };
+    assetGrowth: {
+      type: string;
+      xAxis: string[];
+      series: Record<string, number[]>;
+    };
+    timeline: {
+      type: string;
+      periods: { from: number; to: number; color: string; label: string }[];
+    };
+    gapBar: {
+      type: string;
+      data: Record<string, number>;
+      target: number;
+    };
   };
   ai_narrative: string;
 }
@@ -96,9 +106,11 @@ export interface SectionC {
 
 export interface TopicChart {
   type: string;
-  labels: string[];
-  values: number[];
+  data: Record<string, number> | unknown[][];
+  unit?: string;
   highlight?: string;
+  columns?: string[];
+  rows?: unknown[][];
 }
 
 export interface TopicItem {
@@ -119,15 +131,18 @@ export interface SectionD {
 
 export interface GradeInfo {
   grade: Grade;
-  label: string;
-  description: string;
+  label?: string;
+  description?: string;
+  expenseRatio?: number;
+  targetRatio?: number;
+  requiredReduction?: number;
 }
 
 export interface RoadmapStep {
   phase: number;
-  title: string;
-  description: string;
-  duration?: string;
+  goal: string;
+  period: string;
+  targetReduction: number;
 }
 
 export interface SectionE {
@@ -137,10 +152,7 @@ export interface SectionE {
   next: GradeInfo;
   ultimate: GradeInfo;
   steps: RoadmapStep[];
-  chart: {
-    type: string;
-    gauge: { current: number; target: number; max: number };
-  };
+  chart: Record<string, unknown>;
   ai_narrative: string;
 }
 
@@ -149,20 +161,25 @@ export interface SectionE {
 export interface CostTip {
   category: string;
   tip: string;
-  potentialSaving: number;
+  potentialSaving: string;
+  avgCost?: number;
 }
 
 export interface BoostSimulationItem {
-  action: string;
-  monthlySaving: number;
-  yearlyEffect: number;
-  tenYearEffect: number;
+  extra: number;
+  newSurplus: number;
+  in10y_invest: number;
+  in10y_savings: number;
 }
 
 export interface SectionF {
   section: 'F';
   title: string;
-  current: number;
+  current: {
+    surplus: number;
+    fixedCost: number;
+    variableCost: number;
+  };
   fixedCostTips: CostTip[];
   variableCostTips: CostTip[];
   boostSimulation: BoostSimulationItem[];
@@ -179,33 +196,22 @@ export interface EducationTopic {
   icon?: string;
 }
 
-export interface ProductRate {
-  product: string;
-  rate: string;
-  note?: string;
-}
-
 export interface SectionG {
   section: 'G';
   title: string;
   userGrade: Grade;
   topics: EducationTopic[];
-  productRates: ProductRate[];
+  productRates: Record<string, string>;
   disclaimer: string;
   ai_narrative: string;
 }
 
 // === Section H: 12개월 캘린더 ===
 
-export interface MonthEvent {
-  label: string;
-  type?: string;
-}
-
 export interface MonthCard {
   month: number;
   title: string;
-  events: MonthEvent[];
+  events: string[];
   todo: string;
 }
 

@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, Link2, X, FileText, ExternalLink, Loader2, CalendarPlus } from 'lucide-react';
 import CategoryTabs, { type BookTab } from '@/components/book/CategoryTabs';
+import MonthlyReportCreate from '@/components/book/MonthlyReportCreate';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useDetailedReports, useMonthlyReports, useScraps, useCreateScrap, useWrongNotes } from '@/hooks/useApi';
 import Markdown from '@/components/common/Markdown';
@@ -13,6 +14,7 @@ export default function BookPage() {
   const router = useRouter();
   const [tab, setTab] = useState<BookTab>('detailed');
   const [showScrapModal, setShowScrapModal] = useState(false);
+  const [showMonthlyCreate, setShowMonthlyCreate] = useState(false);
   const [scrapUrl, setScrapUrl] = useState('');
 
   const { data: reports, isLoading: reportsLoading } = useDetailedReports(tab === 'detailed');
@@ -74,7 +76,16 @@ export default function BookPage() {
 
             {/* 구분선 + 월간 리포트 */}
             <div className="border-t border-border pt-4 mt-4">
-              <p className="text-sm font-semibold text-foreground mb-3">월간 리포트</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-foreground">월간 리포트</p>
+                <button
+                  onClick={() => setShowMonthlyCreate(true)}
+                  className="inline-flex items-center gap-1 h-8 px-3 text-xs font-medium rounded-lg border border-accent text-accent hover:bg-accent/5 transition-colors"
+                >
+                  <CalendarPlus size={14} />
+                  이번 달 만들기
+                </button>
+              </div>
               {monthlyLoading ? <Skeleton /> : (
                 <div className="space-y-3">
                   {(monthlyReports ?? []).map((item) => (
@@ -172,6 +183,17 @@ export default function BookPage() {
       >
         <Plus size={22} />
       </button>
+
+      {/* Monthly Report Create Modal */}
+      {showMonthlyCreate && (
+        <MonthlyReportCreate
+          onClose={() => setShowMonthlyCreate(false)}
+          onCreated={(id) => {
+            setShowMonthlyCreate(false);
+            router.push(`/book/${id}?type=monthly`);
+          }}
+        />
+      )}
 
       {/* Scrap Modal */}
       {showScrapModal && (

@@ -22,7 +22,10 @@ export const useUserStore = create<UserState>((set) => ({
   role: 'user',
   isLoggedIn: false,
   setUser: (user) => set((state) => ({ ...state, ...user })),
-  logout: () =>
+  logout: () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('moneyrun_jwt');
+    }
     set({
       id: '',
       nickname: '',
@@ -30,5 +33,6 @@ export const useUserStore = create<UserState>((set) => ({
       hasCompletedOnboarding: false,
       role: 'user',
       isLoggedIn: false,
-    }),
+    });
+  },
 }));

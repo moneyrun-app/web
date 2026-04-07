@@ -427,7 +427,7 @@ export default function HomePage() {
         const currentCheon = parseInt(checkAmount) || 0;
         const dailyBudgetWon = Math.floor(variableCost.daily / 1000) * 1000;
         return (
-          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center px-4 pb-4" role="dialog" aria-modal="true" aria-label={`${month + 1}월 ${checkDate}일 체크`} ref={checkModalRef}>
+          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center px-4 pb-20 md:pb-4" role="dialog" aria-modal="true" aria-label={`${month + 1}월 ${checkDate}일 체크`} ref={checkModalRef}>
             <div className="absolute inset-0 bg-black/40 animate-[fadeIn_200ms_ease-out]" onClick={() => { setCheckDate(null); setCheckStatus(null); setCheckAmount(''); }} />
             <div className="relative bg-background rounded-2xl shadow-xl w-full max-w-sm p-4 animate-[slideUp_300ms_ease-out] space-y-3">
               {/* 헤더 한줄 */}
@@ -457,9 +457,10 @@ export default function HomePage() {
                   <input
                     type="text"
                     inputMode="numeric"
-                    readOnly
                     value={checkAmount && currentCheon > 0 ? formatCheonWon(currentCheon) : ''}
                     onKeyDown={(e) => {
+                      if (e.key === 'Tab' || e.key === 'Escape') return;
+                      e.preventDefault();
                       if (e.key >= '0' && e.key <= '9') {
                         const next = parseInt((checkAmount || '') + e.key) || 0;
                         if (checkStatus === 'green' && next > dailyBudgetCheon) { setCheckAmount(String(dailyBudgetCheon)); return; }
@@ -469,9 +470,10 @@ export default function HomePage() {
                         setCheckAmount((p) => p.slice(0, -1));
                       }
                     }}
+                    onChange={() => {}}
                     placeholder={checkStatus === 'green' ? `최대 ${formatCheonWon(dailyBudgetCheon)}` : '금액 입력'}
                     autoFocus
-                    className="w-full h-11 px-3 bg-surface border border-border rounded-xl text-foreground text-center font-bold placeholder:text-placeholder/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 caret-transparent"
+                    className="w-full h-11 px-3 bg-surface border border-border rounded-xl text-foreground text-center font-bold placeholder:text-placeholder/40 focus:outline-none focus:ring-2 focus:ring-foreground/10"
                   />
                 </div>
               )}
