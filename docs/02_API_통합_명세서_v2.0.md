@@ -1,8 +1,8 @@
 # 머니런 API 통합 명세서
 
-> **버전:** v2.0
-> **최종 수정:** 2026.04.02
-> **범위:** 3페이지 MVP (페이스메이커 / 마이북 / 마이페이지)
+> **버전:** v3.0
+> **최종 수정:** 2026.04.08
+> **범위:** 프론트엔드 실제 사용 기준 전체 API
 
 ---
 
@@ -66,11 +66,7 @@
 }
 ```
 
----
-
-## 2. 온보딩 (Onboarding)
-
-### POST `/onboarding` — 온보딩 데이터 저장 (인증 필요)
+### POST `/auth/onboarding` — 온보딩 데이터 저장 (인증 필요)
 
 최초 1회. 재무 프로필 + 좋은 소비 + 고정 소비를 한 번에 저장.
 
@@ -78,6 +74,7 @@
 
 ```json
 {
+  "nickname": "닉네임",
   "age": 27,
   "monthlyIncome": 2300000,
   "goodSpendings": [
@@ -110,7 +107,7 @@
 
 ---
 
-## 3. 유저 (Users)
+## 2. 유저 (Users)
 
 ### GET `/users/me` — 내 정보 조회 (인증 필요)
 
@@ -128,17 +125,9 @@
 }
 ```
 
-### PATCH `/users/me` — 내 정보 수정 (인증 필요)
-
-```json
-{ "email": "new@email.com", "marketingConsent": true }
-```
-
-### DELETE `/users/me` — 회원 탈퇴 (인증 필요)
-
 ---
 
-## 4. 재무 프로필 (Finance)
+## 3. 재무 프로필 (Finance)
 
 ### GET `/finance/profile` — 재무 프로필 + 잉여자금 조회 (인증 필요)
 
@@ -174,27 +163,32 @@
 수정 즉시 잉여자금 재계산 후 반환. 변경할 항목만 전송.
 
 ```json
-{ "age": 28, "monthlyIncome": 2500000 }
+{ "age": 28, "monthlyIncome": 2500000, "nickname": "새닉네임" }
 ```
 
-### POST `/finance/good-spendings` — 좋은 소비 추가 (인증 필요)
+---
+
+## 4. 시뮬레이션 (Simulation)
+
+### POST `/simulation/calculate` — 시뮬레이션 계산 (인증 불필요)
+
+비로그인 사용자도 사용 가능한 시뮬레이션.
+
+**Request**
 
 ```json
-{ "type": "irp", "label": "IRP", "amount": 200000 }
-```
-
-### PATCH `/finance/good-spendings/:id` — 좋은 소비 수정 (인증 필요)
-
-```json
-{ "amount": 250000 }
-```
-
-### DELETE `/finance/good-spendings/:id` — 좋은 소비 삭제 (인증 필요)
-
-### PATCH `/finance/fixed-expenses` — 고정 소비 수정 (인증 필요)
-
-```json
-{ "rent": 650000, "utilities": 90000, "phone": 55000 }
+{
+  "age": 27,
+  "monthlyIncome": 2300000,
+  "goodSpendings": [
+    { "type": "savings", "label": "적금", "amount": 300000 }
+  ],
+  "fixedExpenses": {
+    "rent": 700000,
+    "utilities": 100000,
+    "phone": 55000
+  }
+}
 ```
 
 ---
@@ -227,38 +221,67 @@
 }
 ```
 
-| 필드 | 설명 |
-|---|---|
-| `message` | AI가 생성한 오늘의 메시지 |
-| `actions` | 추천 행동 1~2개 (마이북 콘텐츠 링크) |
-| `actions[].type` | `learn_content`, `detailed_report`, `weekly_report` |
+### POST `/pacemaker/quiz/:quizId/answer` — 퀴즈 답변 (인증 필요)
 
-### GET `/pacemaker/history` — 페이스메이커 메시지 히스토리 (인증 필요)
-
-**Query:** `?page=1&limit=20`
+**Request**
 
 ```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "uuid",
-        "date": "2026-04-02",
-        "message": "야 하루에 34,833원인데...",
-        "grade": "YELLOW"
-      }
-    ],
-    "pagination": { "page": 1, "limit": 20, "total": 15 }
-  }
-}
+{ "userAnswer": 2 }
+```
+
+### POST `/pacemaker/feedback` — 메시지 피드백 (인증 필요)
+
+**Request**
+
+```json
+{ "messageId": "uuid", "type": "like|dislike|report", "content": "피드백 내용" }
+```
+
+### GET `/pacemaker/daily-checks` — 일일 체크 조회 (인증 필요)
+
+**Query:** `?month=2026-04`
+
+### GET `/pacemaker/weekly-summary` — 주간 요약 (인증 필요)
+
+**Query:** `?date=2026-04-07`
+
+### POST `/pacemaker/daily-check` — 일일 체크 제출 (인증 필요)
+
+**Request**
+
+```json
+{ "date": "2026-04-07", "status": "under|over|skip", "amount": 30000 }
+```
+
+### GET `/pacemaker/monthly-finalize-status` — 월간 확정 상태 (인증 필요)
+
+### POST `/pacemaker/monthly-finalize` — 월간 확정 (인증 필요)
+
+**Request**
+
+```json
+{ "month": "2026-03" }
+```
+
+### POST `/pacemaker/monthly-finalize/cancel` — 월간 확정 취소 (인증 필요)
+
+**Request**
+
+```json
+{ "month": "2026-03" }
 ```
 
 ---
 
 ## 6. 마이북 (Book)
 
-### GET `/book/detailed-reports` — 상세 리포트 목록 (인증 필요)
+### 오답노트
+
+#### GET `/book/wrong-notes` — 오답노트 목록 (인증 필요)
+
+### 상세 리포트
+
+#### GET `/book/detailed-reports` — 상세 리포트 목록 (인증 필요)
 
 ```json
 {
@@ -278,7 +301,7 @@
 }
 ```
 
-### GET `/book/detailed-reports/:id` — 상세 리포트 상세 (인증 필요)
+#### GET `/book/detailed-reports/:id` — 상세 리포트 상세 (인증 필요)
 
 ```json
 {
@@ -299,57 +322,21 @@
 }
 ```
 
-### GET `/book/weekly-reports` — 주간 리포트 목록 (인증 필요)
+### 월간 리포트
 
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "weekStart": "2026-03-25",
-      "weekEnd": "2026-03-31",
-      "summary": "이번 주 잘 버텼어요. 식비를 잘 잡았어요.",
-      "createdAt": "2026-04-01T00:00:00.000Z"
-    }
-  ]
-}
-```
+#### GET `/book/monthly-reports` — 월간 리포트 목록 (인증 필요)
 
-### POST `/book/weekly-reports` — 주간 리포트 생성 (인증 필요)
+#### GET `/book/monthly-reports/:id` — 월간 리포트 상세 (인증 필요)
 
-```json
-{
-  "weekStatus": {
-    "overallFeeling": "tight",
-    "memo": "이번 주 회식이 2번이나 있어서 식비가 많이 나갔어요"
-  }
-}
-```
+#### GET `/book/monthly-reports/proposals` — 월간 리포트 제안 항목 (인증 필요)
 
-### GET `/book/weekly-reports/:id` — 주간 리포트 상세 (인증 필요)
+#### POST `/book/monthly-reports` — 월간 리포트 생성 (인증 필요)
 
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "weekStart": "2026-03-25",
-    "weekEnd": "2026-03-31",
-    "summary": "회식이 잦았던 주, 하지만 다음 주는 잡을 수 있어요.",
-    "guide": "마크다운 본문 — 한 쪽짜리 가이드...",
-    "userInput": {
-      "overallFeeling": "tight",
-      "memo": "회식 2번..."
-    },
-    "createdAt": "2026-04-01T00:00:00.000Z"
-  }
-}
-```
+### 학습 콘텐츠
 
-### GET `/book/learn` — 금융 학습 콘텐츠 목록 (인증 필요)
+#### GET `/book/learn` — 금융 학습 콘텐츠 목록 (인증 필요)
 
-내 등급 기준. `?grade=RED`로 특정 등급 지정 가능.
+**Query:** `?grade=RED` (선택)
 
 ```json
 {
@@ -367,48 +354,35 @@
 }
 ```
 
-### GET `/book/learn/:id` — 콘텐츠 상세 (인증 필요, 조회 시 자동 읽음 처리)
+#### GET `/book/learn/:id` — 콘텐츠 상세 (인증 필요, 조회 시 자동 읽음 처리)
+
+#### POST `/book/learn/:id/scrap` — 스크랩 토글 (인증 필요)
+
+### 스크랩
+
+#### GET `/book/scraps` — 내 스크랩 목록 (인증 필요)
+
+#### POST `/book/scraps` — 외부 스크랩 추가 (인증 필요)
+
+**Request**
 
 ```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "비상금 없으면 진짜 거지 됩니다",
-    "content": "마크다운 본문...",
-    "grade": "RED",
-    "isRead": true,
-    "isScrapped": false
-  }
-}
+{ "url": "https://example.com/article" }
 ```
 
-### POST `/book/learn/:id/scrap` — 스크랩 토글 (인증 필요)
-
-```json
-{ "success": true, "data": { "isScrapped": true } }
-```
-
-### GET `/book/scraps` — 내 스크랩 목록 (인증 필요)
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "title": "비상금 없으면 진짜 거지 됩니다",
-      "grade": "RED",
-      "type": "learn",
-      "scrappedAt": "2026-04-01T12:00:00.000Z"
-    }
-  ]
-}
-```
+#### DELETE `/book/scraps/:id` — 스크랩 삭제 (인증 필요)
 
 ---
 
-## 7. 운영 상수 (Constants)
+## 7. 통계 (Statistics)
+
+### GET `/statistics/peers` — 또래 통계 비교 (인증 불필요)
+
+**Query:** `?age=27&monthlyIncome=2300000`
+
+---
+
+## 8. 운영 상수 (Constants)
 
 ### GET `/constants` — 운영 상수 조회 (인증 불필요)
 
@@ -435,34 +409,64 @@
 
 ---
 
-## API 엔드포인트 전체 목록
+## 9. 어드민 (Admin)
+
+### GET `/admin/users` — 유저 목록 (어드민 전용)
+
+**Query:** `?page=1&limit=20`
+
+### GET `/admin/quizzes` — 퀴즈 목록 (어드민 전용)
+
+### PATCH `/admin/constants/:key` — 운영 상수 수정 (어드민 전용)
+
+**Request**
+
+```json
+{ "value": "새로운 값" }
+```
+
+---
+
+## API 엔드포인트 전체 목록 (프론트엔드 실사용 기준)
 
 | 메서드 | 경로 | 인증 | 설명 |
 |---|---|---|---|
 | POST | `/auth/kakao` | X | 로그인/회원가입 |
-| POST | `/onboarding` | O | 온보딩 데이터 저장 |
+| POST | `/auth/onboarding` | O | 온보딩 데이터 저장 |
 | GET | `/users/me` | O | 내 정보 조회 |
-| PATCH | `/users/me` | O | 내 정보 수정 |
-| DELETE | `/users/me` | O | 회원 탈퇴 |
 | GET | `/finance/profile` | O | 재무 프로필 + 잉여자금 |
 | PATCH | `/finance/profile` | O | 재무 프로필 수정 |
-| POST | `/finance/good-spendings` | O | 좋은 소비 추가 |
-| PATCH | `/finance/good-spendings/:id` | O | 좋은 소비 수정 |
-| DELETE | `/finance/good-spendings/:id` | O | 좋은 소비 삭제 |
-| PATCH | `/finance/fixed-expenses` | O | 고정 소비 수정 |
+| POST | `/simulation/calculate` | X | 시뮬레이션 계산 |
 | GET | `/pacemaker/today` | O | 오늘의 메시지 |
-| GET | `/pacemaker/history` | O | 메시지 히스토리 |
+| POST | `/pacemaker/quiz/:quizId/answer` | O | 퀴즈 답변 |
+| POST | `/pacemaker/feedback` | O | 메시지 피드백 |
+| GET | `/pacemaker/daily-checks` | O | 일일 체크 조회 |
+| GET | `/pacemaker/weekly-summary` | O | 주간 요약 |
+| POST | `/pacemaker/daily-check` | O | 일일 체크 제출 |
+| GET | `/pacemaker/monthly-finalize-status` | O | 월간 확정 상태 |
+| POST | `/pacemaker/monthly-finalize` | O | 월간 확정 |
+| POST | `/pacemaker/monthly-finalize/cancel` | O | 월간 확정 취소 |
+| GET | `/book/wrong-notes` | O | 오답노트 |
 | GET | `/book/detailed-reports` | O | 상세 리포트 목록 |
 | GET | `/book/detailed-reports/:id` | O | 상세 리포트 상세 |
-| GET | `/book/weekly-reports` | O | 주간 리포트 목록 |
-| POST | `/book/weekly-reports` | O | 주간 리포트 생성 |
-| GET | `/book/weekly-reports/:id` | O | 주간 리포트 상세 |
+| GET | `/book/monthly-reports` | O | 월간 리포트 목록 |
+| GET | `/book/monthly-reports/:id` | O | 월간 리포트 상세 |
+| GET | `/book/monthly-reports/proposals` | O | 월간 리포트 제안 |
+| POST | `/book/monthly-reports` | O | 월간 리포트 생성 |
 | GET | `/book/learn` | O | 학습 콘텐츠 목록 |
 | GET | `/book/learn/:id` | O | 학습 콘텐츠 상세 |
 | POST | `/book/learn/:id/scrap` | O | 스크랩 토글 |
 | GET | `/book/scraps` | O | 내 스크랩 목록 |
+| POST | `/book/scraps` | O | 외부 스크랩 추가 |
+| DELETE | `/book/scraps/:id` | O | 스크랩 삭제 |
+| GET | `/statistics/peers` | X | 또래 통계 비교 |
 | GET | `/constants` | X | 운영 상수 |
+| GET | `/admin/users` | O | 어드민 유저 목록 |
+| GET | `/admin/quizzes` | O | 어드민 퀴즈 목록 |
+| PATCH | `/admin/constants/:key` | O | 어드민 상수 수정 |
+
+**총 33개 엔드포인트** (인증 필요: 29개, 비로그인: 4개)
 
 ---
 
-*머니런 API 통합 명세서 v2.0 — 2026.04.02*
+*머니런 API 통합 명세서 v3.0 — 2026.04.08*

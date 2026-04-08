@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useFinanceStore } from '@/store/financeStore';
 import { usePacemakerToday, useDailyChecks, useSubmitDailyCheck, useAnswerQuiz, useMonthlyFinalizeStatus, useMonthlyFinalize, useCancelFinalize } from '@/hooks/useApi';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { formatWonRaw } from '@/lib/format';
+import { formatWon, formatWonRaw } from '@/lib/format';
 import GradeBadge from '@/components/common/GradeBadge';
 import type { DailyCheckStatus, Quiz } from '@/types/book';
 import Markdown from '@/components/common/Markdown';
@@ -45,22 +45,16 @@ const TrackWeek = memo(function TrackWeek({
           const idx = hoverDay - week.start;
           const check = checkMap.get(toDateStr(new Date(year, month, hoverDay)));
           const isToday = hoverDay === today;
-          const leftPct = ((idx + 0.5) / 7) * 100;
+          const rawPct = ((idx + 0.5) / 7) * 100;
+          const clampedPct = Math.max(20, Math.min(80, rawPct));
           return (
             <div
-              className="absolute -top-2 -translate-y-full -translate-x-1/2 px-3 py-2 bg-foreground text-background text-3xs rounded-lg whitespace-nowrap z-20 space-y-0.5 pointer-events-none animate-[fadeIn_150ms_ease-out]"
-              style={{ left: `${Math.max(10, Math.min(90, leftPct))}%` }}
+              className="absolute bottom-full mb-1.5 -translate-x-1/2 px-2 py-1.5 bg-foreground text-background rounded-md z-50 pointer-events-none animate-[fadeIn_150ms_ease-out] hidden md:block"
+              style={{ left: `${clampedPct}%`, fontSize: '10px', lineHeight: '14px' }}
             >
-              <p className="font-semibold text-xs">{month + 1}월 {hoverDay}일</p>
-              {check ? (
-                <p>{check.status === 'green' ? `${formatWonRaw(check.amount)} 절약` : check.status === 'red' ? `${formatWonRaw(check.amount)} 초과` : '예산 내 소비'}</p>
-              ) : (
-                <p>{isToday ? '클릭해서 체크하기' : '미체크'}</p>
-              )}
-              <div className="border-t border-white/20 pt-0.5 mt-0.5">
-                <p>하루 {formatWonRaw(dailyBudget)} · 주간 {formatWonRaw(weeklyBudget)} · 월 {formatWonRaw(monthlyBudget)}</p>
-              </div>
-              <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-[4px] border-x-transparent border-t-[4px] border-t-foreground" />
+              <p className="font-semibold whitespace-nowrap">{month + 1}월 {hoverDay}일 {check ? (check.status === 'green' ? `${formatWonRaw(check.amount)} 절약` : check.status === 'red' ? `${formatWonRaw(check.amount)} 초과` : '예산 내') : (isToday ? '미체크' : '미체크')}</p>
+              <p className="whitespace-nowrap opacity-60">일 {formatWonRaw(dailyBudget)} · 주 {formatWonRaw(weeklyBudget)} · 월 {formatWonRaw(monthlyBudget)}</p>
+              <div className="absolute top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-foreground" style={{ left: `calc(50% + ${rawPct - clampedPct}%)`, transform: 'translateX(-50%)' }} />
             </div>
           );
         })()}
@@ -330,8 +324,9 @@ export default function HomePage() {
         </div>
         <div
           key={trackKey}
-          className="overflow-hidden"
           style={{
+            overflowX: 'clip',
+            overflowY: 'visible',
             animation: slideDir
               ? `${slideDir === 'left' ? 'slideInLeft' : 'slideInRight'} 250ms ease-out`
               : undefined,
@@ -351,7 +346,15 @@ export default function HomePage() {
           const isPastMonth = !isCurrentMonth;
           const isPastUnfinalized = isPastMonth && (finalizeStatus?.unfinalizedMonths ?? []).includes(viewingMonthStr);
 
-          return weeks.map((week, wi) => (
+          const weeklyB = Math.floor(variableCost.weekly / 1000) * 1000;
+          const monthlyB = Math.floor(variableCost.monthly / 1000) * 1000;
+
+          return (<>
+            <div className="flex items-center gap-2 mb-2 md:hidden">
+              <span className="text-3xs font-medium text-foreground/70 px-2.5 py-0.5 rounded-full border border-foreground/15">주 {formatWon(weeklyB)}</span>
+              <span className="text-3xs font-medium text-foreground/70 px-2.5 py-0.5 rounded-full border border-foreground/15">월 {formatWon(monthlyB)}</span>
+            </div>
+            {weeks.map((week, wi) => (
             <TrackWeek
               key={wi}
               week={week}
@@ -377,7 +380,8 @@ export default function HomePage() {
               }}
               onHoverDay={setHoverDay}
             />
-          ));
+          ))}
+          </>);
         })()}
 
         {/* 확정 버튼 영역 */}
