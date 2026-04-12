@@ -21,6 +21,7 @@ const defaultInput: SimulationInput = {
   retirementAge: 0,
   pensionStartAge: 0,
   monthlyIncome: 0,
+  monthlyInvestment: 0,
   monthlyFixedCost: 0,
   monthlyVariableCost: 0,
 };

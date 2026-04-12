@@ -1,0 +1,125 @@
+import type { ScrapChannel } from './book';
+
+// === MyBook Overview ===
+
+export interface MyBookOverview {
+  detailedReport: {
+    id: string;
+    summary: string;
+    grade: string;
+    createdAt: string;
+  } | null;
+
+  purchasedBooks: PurchasedBook[];
+  totalHighlights: number;
+
+  scraps: {
+    urlScrapCount: number;
+    quizScrapCount: number;
+    totalCount: number;
+    canGenerateBook: boolean;
+  };
+}
+
+export interface PurchasedBook {
+  purchaseId: string;
+  bookId: string | null;
+  bookTitle: string;
+  category: string;
+  coverImageUrl: string | null;
+  source: 'store' | 'scrap';
+  status: 'generating' | 'completed' | 'failed';
+  highlightCount: number;
+  createdAt: string;
+}
+
+// === Book Reader ===
+
+export interface Highlight {
+  id: string;
+  sentenceText: string;
+  color: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface BookChapter {
+  index?: number;
+  chapterIndex?: number;
+  title: string;
+  content: string;
+  highlights: Highlight[];
+}
+
+export interface BookReader {
+  purchaseId: string;
+  bookId: string;
+  bookTitle: string;
+  category: string;
+  status: 'generating' | 'completed' | 'failed';
+  chapters: BookChapter[];
+}
+
+// === Highlights ===
+
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'orange';
+
+export interface AddHighlightRequest {
+  chapterIndex: number;
+  sentenceText: string;
+  color: HighlightColor;
+  note?: string;
+}
+
+export interface HighlightItem {
+  id: string;
+  bookTitle: string;
+  chapterTitle?: string;
+  chapterIndex: number;
+  sentenceText: string;
+  color: string;
+  note: string | null;
+  purchaseId: string;
+  createdAt: string;
+}
+
+// 백엔드는 배열을 직접 반환
+export type HighlightsResponse = HighlightItem[];
+
+// === Generate from Scraps ===
+
+export interface GenerateFromScrapsResponse {
+  purchaseId: string;
+  status: 'generating';
+  estimatedSeconds: number;
+  scrapCount: number;
+}
+
+// === Scraps (URL + Quiz 통합) ===
+
+export interface UrlScrap {
+  id: string;
+  url: string;
+  channel: ScrapChannel;
+  creator: string | null;
+  title: string;
+  aiSummary: string;
+  createdAt: string;
+}
+
+export interface QuizScrap {
+  id: string;
+  quizId: string;
+  question: string;
+  choices: string[];
+  correctAnswer: number;
+  briefExplanation: string;
+  difficultyLevel: number;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface MyBookScrapsResponse {
+  urlScraps: UrlScrap[];
+  quizScraps: QuizScrap[];
+}

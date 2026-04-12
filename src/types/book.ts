@@ -1,90 +1,48 @@
 import type { Grade } from './finance';
 
-// === Daily Check ===
-
-export type DailyCheckStatus = 'green' | 'yellow' | 'red';
-
-export interface DailyCheck {
-  id: string;
-  date: string;
-  status: DailyCheckStatus;
-  amount: number;
-}
-
-export interface DailyChecksSummary {
-  totalSpent: number;
-  adjustedBudget: number;
-  dailyBudget: number;
-  monthlyBudget: number;
-  spentRate: number;
-  daysInMonth: number;
-  daysTracked: number;
-  daysUnder: number;
-  daysOver: number;
-  currentStreak: number;
-  bestStreak: number;
-}
-
-export interface DailyChecksResponse {
-  days: DailyCheck[];
-  summary: DailyChecksSummary;
-}
-
-export interface WeeklySummary {
-  weekStart: string;
-  weekEnd: string;
-  daysTracked: number;
-  daysSkipped: number;
-  daysUnder: number;
-  daysOver: number;
-  totalSpent: number;
-  adjustedBudget: number;
-  spentRate: number;
-  remainingBudget: number;
-}
-
 // === Pacemaker ===
 
-export type SpendingLevel = 'green' | 'yellow' | 'red';
-
-export interface SpendingStatus {
-  todayRemaining: number;
-  weeklyRemaining: number;
-  weeklyUsed: number;
-  level: SpendingLevel;
-}
-
-export interface Quiz {
+export interface TodayQuiz {
   id: string;
   question: string;
   choices: string[];
-  source: string;
-  category: string;
-  wrongNoteId?: string;
+  difficultyLevel: number; // 1~5
+}
+
+export interface Attendance {
+  checkedToday: boolean;
+  currentStreak: number;
+  totalDays: number;
+}
+
+export interface PacemakerCard {
+  cardNumber: number;
+  emoji: string;
+  title: string;
+  content: string;
 }
 
 export interface PacemakerToday {
-  id: string;
+  id: string | null;
   date: string;
-  message: string;
-  grade: Grade;
-  theme: string;
-  quote: string;
-  dailyVariableCost: number;
-  spendingStatus: SpendingStatus;
-  quizzes: Quiz[];
-  quizCount: number;
-  disclaimer: string;
-  createdAt: string;
+  cards?: PacemakerCard[];
+  message?: string | null;
+  grade: Grade | null;
+  theme: string | null;
+  quote: string | null;
+  todayQuiz: TodayQuiz | null;
+  attendance: Attendance;
+  createdAt: string | null;
 }
 
 export interface QuizAnswerResponse {
   correct: boolean;
   correctAnswer: number;
-  userAnswer: number;
   briefExplanation: string;
   detailedExplanation: string;
-  wrongNoteId?: string;
+  attendanceChecked: boolean;
+  currentStreak: number;
+  suggestLevelChange: 'up' | 'down' | null;
 }
 
 export interface WrongNote {
@@ -92,20 +50,10 @@ export interface WrongNote {
   quizId: string;
   question: string;
   choices: string[];
-  correctAnswer: number;
   userAnswer: number;
-  briefExplanation: string;
+  correctAnswer: number;
   detailedExplanation: string;
-  source: string;
-  category: string;
   createdAt: string;
-}
-
-export interface PacemakerHistoryItem {
-  id: string;
-  date: string;
-  message: string;
-  grade: Grade;
 }
 
 export type FeedbackType = 'inaccurate' | 'offensive' | 'other';
@@ -229,31 +177,6 @@ export interface DetailedReport {
   createdAt: string;
 }
 
-// === Book: Monthly Reports ===
-
-export type WeeklyFeeling = 'good' | 'okay' | 'tight' | 'bad';
-
-export interface MonthlyReportListItem {
-  id: string;
-  month: string;
-  summary: string;
-  createdAt: string;
-}
-
-export interface MonthlyReport {
-  id: string;
-  month: string;
-  summary: string;
-  guide: string;
-  monthlyStats: {
-    greenDays: number;
-    yellowDays: number;
-    redDays: number;
-    totalCheckedDays: number;
-  };
-  createdAt: string;
-}
-
 // === Book: External Scraps ===
 
 export type ScrapChannel = 'youtube' | 'threads' | 'instagram' | 'other';
@@ -262,30 +185,8 @@ export interface ExternalScrap {
   id: string;
   url: string;
   channel: ScrapChannel;
-  creator: string;
-  contentDate: string;
+  creator: string | null;
   title: string;
   aiSummary: string;
-  scrapCount: number;
   createdAt: string;
-}
-
-// === Book: Learn ===
-
-export interface LearnContentListItem {
-  id: string;
-  title: string;
-  grade: Grade;
-  isRead: boolean;
-  isScrapped: boolean;
-  readMinutes: number;
-}
-
-export interface LearnContent {
-  id: string;
-  title: string;
-  content: string;
-  grade: Grade;
-  isRead: boolean;
-  isScrapped: boolean;
 }

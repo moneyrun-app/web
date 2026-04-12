@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { Grade, VariableCost } from '@/types/finance';
+import type { Grade, VariableCost, AvailableBudget } from '@/types/finance';
 
 interface FinanceState {
   nickname: string;
@@ -9,6 +9,7 @@ interface FinanceState {
   retirementAge: number;
   pensionStartAge: number;
   monthlyIncome: number;
+  monthlyInvestment: number;
   monthlyFixedCost: number;
   monthlyVariableCost: number;
   monthlyExpense: number;
@@ -17,6 +18,7 @@ interface FinanceState {
   vestingPeriod: number;
   grade: Grade;
   variableCost: VariableCost;
+  availableBudget: AvailableBudget;
   setProfile: (profile: Partial<FinanceState>) => void;
 }
 
@@ -26,6 +28,7 @@ export const useFinanceStore = create<FinanceState>((set) => ({
   retirementAge: 0,
   pensionStartAge: 65,
   monthlyIncome: 0,
+  monthlyInvestment: 0,
   monthlyFixedCost: 0,
   monthlyVariableCost: 0,
   monthlyExpense: 0,
@@ -34,6 +37,7 @@ export const useFinanceStore = create<FinanceState>((set) => ({
   vestingPeriod: 0,
   grade: 'RED' as Grade,
   variableCost: { monthly: 0, weekly: 0, daily: 0, daysInMonth: 30 },
+  availableBudget: { monthly: 0, weekly: 0, daily: 0 },
 
   setProfile: (profile) => set(profile),
 }));

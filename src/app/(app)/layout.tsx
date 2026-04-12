@@ -85,21 +85,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         console.log('[init] hasCompletedOnboarding:', data.user.hasCompletedOnboarding, 'simRaw:', !!simRaw);
 
         if (!data.user.hasCompletedOnboarding && simRaw) {
-          // 신규 유저: 시뮬레이션 데이터로 온보딩
+          // 신규 유저: 온보딩 (재무 프로필만 저장, ~1초)
           try {
             const input = JSON.parse(simRaw);
-            console.log('[onboarding] 요청 전송:', { nickname: input.nickname, age: input.age, monthlyIncome: input.monthlyIncome });
+            console.log('[onboarding] simRaw parsed:', { nickname: input.nickname, age: input.age, keys: Object.keys(input) });
             const onboardRes = await api.post<{
               grade: 'RED' | 'YELLOW' | 'GREEN';
               monthlyExpense: number; surplus: number;
               investmentPeriod: number; vestingPeriod: number;
-              variableCost: { monthly: number; weekly: number; daily: number; daysInMonth: number };
+              availableBudget: { monthly: number; weekly: number; daily: number };
             }>('/auth/onboarding', {
               nickname: input.nickname || data.user.nickname || '',
               age: input.age || 0,
               retirementAge: input.retirementAge || 0,
               pensionStartAge: input.pensionStartAge || 65,
               monthlyIncome: input.monthlyIncome || 0,
+              monthlyInvestment: input.monthlyInvestment || 0,
               monthlyFixedCost: input.monthlyFixedCost || 0,
               monthlyVariableCost: input.monthlyVariableCost || 0,
             });
@@ -110,6 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               retirementAge: input.retirementAge || 0,
               pensionStartAge: input.pensionStartAge || 65,
               monthlyIncome: input.monthlyIncome || 0,
+              monthlyInvestment: input.monthlyInvestment || 0,
               monthlyFixedCost: input.monthlyFixedCost || 0,
               monthlyVariableCost: input.monthlyVariableCost || 0,
               monthlyExpense: onboardRes.monthlyExpense,
@@ -117,24 +119,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               investmentPeriod: onboardRes.investmentPeriod,
               vestingPeriod: onboardRes.vestingPeriod,
               grade: onboardRes.grade,
-              variableCost: onboardRes.variableCost,
+              availableBudget: onboardRes.availableBudget,
             });
 
-            console.log('[onboarding] 성공:', onboardRes);
             sessionStorage.removeItem(SIM_STORAGE_KEY);
+
+            // 리포트 생성은 백그라운드 (즉시 응답, 마이북에서 폴링)
+            api.post('/book/detailed-reports/generate').catch(() => {});
           } catch (e) {
             console.error('[onboarding] 실패:', e);
-            // 온보딩 실패 시 재시도 가능하도록 세션 유지
           }
         } else if (data.user.hasCompletedOnboarding) {
           // 기존 유저: DB 프로필 로드
           try {
             const profile = await api.get<{
               nickname: string; age: number; retirementAge: number; pensionStartAge: number;
-              monthlyIncome: number; monthlyFixedCost: number; monthlyVariableCost: number;
+              monthlyIncome: number; monthlyInvestment: number; monthlyFixedCost: number; monthlyVariableCost: number;
               monthlyExpense: number; surplus: number; investmentPeriod: number; vestingPeriod: number;
               grade: 'RED' | 'YELLOW' | 'GREEN';
               variableCost: { monthly: number; weekly: number; daily: number; daysInMonth: number };
+              availableBudget: { monthly: number; weekly: number; daily: number };
             }>('/finance/profile');
 
             useFinanceStore.getState().setProfile(profile);
@@ -205,7 +209,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         cancelText="괜찮아요"
         onConfirm={() => {
           setShowUpdateDialog(false);
-          router.push('/my');
+          router.push('/my-page');
         }}
         onCancel={() => setShowUpdateDialog(false)}
       />
@@ -216,13 +220,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 // 저장된 JWT로 유저 정보 복원
 function syncUser(jwt: string) {
   api.setToken(jwt);
-  // 프로필 API로 정보 가져오기
   api.get<{
     nickname: string; age: number; retirementAge: number; pensionStartAge: number;
-    monthlyIncome: number; monthlyFixedCost: number; monthlyVariableCost: number;
+    monthlyIncome: number; monthlyInvestment: number; monthlyFixedCost: number; monthlyVariableCost: number;
     monthlyExpense: number; surplus: number; investmentPeriod: number; vestingPeriod: number;
     grade: 'RED' | 'YELLOW' | 'GREEN';
     variableCost: { monthly: number; weekly: number; daily: number; daysInMonth: number };
+    availableBudget: { monthly: number; weekly: number; daily: number };
   }>('/finance/profile').then((profile) => {
     useFinanceStore.getState().setProfile(profile);
   }).catch(() => {});

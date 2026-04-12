@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, HelpCircle, Settings, ArrowLeft } from 'lucide-react';
+import { Users, HelpCircle, Settings, ArrowLeft, BookOpen } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { useEffect } from 'react';
 
 const adminTabs = [
-  { href: '/admin/users', icon: Users, label: '유저 관리' },
-  { href: '/admin/quizzes', icon: HelpCircle, label: '퀴즈 관리' },
-  { href: '/admin/config', icon: Settings, label: '시스템 설정' },
+  { href: '/admin/users', icon: Users, label: '유저' },
+  { href: '/admin/quizzes', icon: HelpCircle, label: '퀴즈' },
+  { href: '/admin/money-book', icon: BookOpen, label: '머니북' },
+  { href: '/admin/config', icon: Settings, label: '설정' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (role !== 'admin') {
-      router.replace('/home');
+      router.replace('/pacemaker');
     }
   }, [role, router]);
 
@@ -30,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* 어드민 헤더 */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.push('/home')}
+          onClick={() => router.push('/pacemaker')}
           className="p-1.5 rounded-lg hover:bg-surface transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-sub" />

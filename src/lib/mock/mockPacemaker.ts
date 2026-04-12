@@ -3,27 +3,24 @@ import type { PacemakerToday } from '@/types/book';
 export const mockPacemakerToday: PacemakerToday = {
   id: 'pm-001',
   date: '2026-04-05',
-  message: '시은아, 하루에 16,000원인데 어제 추천한 행동 잘 했더라 ㅎㅎ 오늘도 도시락?',
-  grade: 'YELLOW',
-  theme: '이번 주 예산 점검',
-  quote: '워렌 버핏 — 돈을 잃지 마라. 그게 첫 번째 규칙이다.',
-  dailyVariableCost: 16_000,
-  spendingStatus: {
-    todayRemaining: 16_000,
-    weeklyRemaining: 116_000,
-    weeklyUsed: 0,
-    level: 'green',
-  },
-  quizzes: [
-    {
-      id: 'quiz-001',
-      question: '적금을 중도해지하면 어떤 이자율이 적용될까?',
-      choices: ['약정 이자율', '중도해지 이자율', '기본 금리', '무이자'],
-      source: '금융상식',
-      category: '저축',
-    },
+  cards: [
+    { cardNumber: 1, emoji: '👋', title: '시은아, 현실 체크!', content: '월 300만원 벌어서 고정비 120만원, 투자 50만원 빼면 하루에 쓸 수 있는 돈이 43,000원이야.' },
+    { cardNumber: 2, emoji: '📊', title: '숫자로 보는 너의 돈', content: '이번 달 변동비 예산은 130만원. 하루 43,000원 페이스를 유지하면 돼.' },
+    { cardNumber: 3, emoji: '💡', title: '오늘의 꿀팁', content: '점심 도시락 싸면 하루 1만원 절약. 한 달이면 30만원이야.' },
   ],
-  quizCount: 1,
-  disclaimer: '참고용 조언이며, 개인 상황에 따라 다를 수 있어요',
+  grade: 'YELLOW',
+  theme: '투자/금융 상식',
+  quote: '워렌 버핏 — 돈을 잃지 마라. 그게 첫 번째 규칙이다.',
+  todayQuiz: {
+    id: 'quiz-001',
+    question: '적금을 중도해지하면 어떤 이자율이 적용될까?',
+    choices: ['약정 이자율', '중도해지 이자율', '기본 금리', '무이자'],
+    difficultyLevel: 2,
+  },
+  attendance: {
+    checkedToday: false,
+    currentStreak: 5,
+    totalDays: 23,
+  },
   createdAt: '2026-04-05T00:00:00.000Z',
 };

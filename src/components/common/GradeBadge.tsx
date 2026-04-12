@@ -8,7 +8,7 @@ const config: Record<Grade, { bg: string; text: string; border: string }> = {
 };
 
 function GradeBadge({ grade, size = 'md' }: { grade: Grade; size?: 'sm' | 'md' | 'lg' }) {
-  const c = config[grade];
+  const c = config[grade] ?? config.RED;
   const sizeClass =
     size === 'sm' ? 'text-xs px-2 py-0.5' :
     size === 'lg' ? 'text-sm px-4 py-1.5' :

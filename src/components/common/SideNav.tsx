@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, BookOpen, User, Settings, LogOut, Shield } from 'lucide-react';
+import { Activity, Store, Library, User, Settings, LogOut, Shield } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUserStore } from '@/store/userStore';
 import ThemeToggle from './ThemeToggle';
 
 const tabs = [
-  { href: '/home', icon: Activity, label: '페이스메이커' },
-  { href: '/book', icon: BookOpen, label: '마이북' },
-  { href: '/my', icon: User, label: '마이' },
+  { href: '/pacemaker', icon: Activity, label: '페이스메이커' },
+  { href: '/money-book', icon: Store, label: '머니북' },
+  { href: '/my-book', icon: Library, label: '마이북' },
+  { href: '/my-page', icon: User, label: '마이' },
 ];
 
 export default function SideNav() {

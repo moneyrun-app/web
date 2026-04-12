@@ -27,13 +27,13 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     async redirect({ url, baseUrl }) {
       // 로그인/로그아웃 후 리다이렉트
-      // / 또는 루트면 /home으로 강제
+      // / 또는 루트면 /pacemaker로 강제
       if (url === baseUrl || url === `${baseUrl}/` || url === '/') {
-        return `${baseUrl}/home`;
+        return `${baseUrl}/pacemaker`;
       }
       if (url.startsWith(baseUrl)) return url;
       if (url.startsWith('/')) return `${baseUrl}${url}`;
-      return `${baseUrl}/home`;
+      return `${baseUrl}/pacemaker`;
     },
     async jwt({ token, account }) {
       // 카카오 토큰만 저장 — 백엔드 JWT 교환은 클라이언트에서 처리

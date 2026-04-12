@@ -16,7 +16,7 @@ export default function LoginSheet({ open, onClose, message }: Props) {
   if (!open) return null;
 
   const handleKakaoLogin = () => {
-    signIn('kakao', { callbackUrl: `${window.location.origin}/home` });
+    signIn('kakao', { callbackUrl: `${window.location.origin}/pacemaker` });
   };
 
   return (

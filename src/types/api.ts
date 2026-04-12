@@ -68,6 +68,77 @@ export interface AdminConstantUpdate {
   updatedAt: string;
 }
 
+// === Admin MoneyBook ===
+
+export interface AdminBook {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  coverImageUrl: string | null;
+  chapterCount: number;
+  purchaseCount: number;
+  requiredFields: AdminRequiredField[];
+  createdAt: string;
+}
+
+export interface AdminRequiredField {
+  key: string;
+  label: string;
+  type: 'number' | 'text' | 'select';
+  // number일 때
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  // select일 때
+  options?: string[];
+  placeholder?: string;
+  required: boolean;
+}
+
+export interface AdminBookChapter {
+  id: string;
+  order: number;
+  title: string;
+  promptTemplate: string;
+}
+
+export interface AdminBooksResponse {
+  books: AdminBook[];
+  total: number;
+}
+
+export interface AdminBookDetailResponse {
+  book: AdminBook;
+  chapters: AdminBookChapter[];
+}
+
+export interface CreateBookRequest {
+  title: string;
+  description: string;
+  category: string;
+  coverImageUrl?: string;
+  requiredFields: AdminRequiredField[];
+}
+
+export interface UpdateBookRequest {
+  title?: string;
+  description?: string;
+  category?: string;
+  coverImageUrl?: string;
+  requiredFields?: AdminRequiredField[];
+}
+
+export interface CreateChapterRequest {
+  title: string;
+  promptTemplate: string;
+}
+
+export interface UpdateChaptersRequest {
+  chapters: { id?: string; order: number; title: string; promptTemplate: string }[];
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: {

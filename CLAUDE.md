@@ -8,7 +8,7 @@
 ## 프로젝트 개요
 
 **머니런(MoneyRun)** — AI가 매일 내 돈 관리를 잔소리해주는 금융 코칭 서비스.
-비로그인 시뮬레이션 체험 → 로그인 → 자동 온보딩 → 페이스메이커(홈) / 마이북 / 마이페이지 / 어드민.
+비로그인 시뮬레이션 체험 → 로그인 → 자동 온보딩 → 페이스메이커 / 머니북 / 마이북 / 마이페이지 / 어드민.
 
 ---
 
@@ -16,13 +16,7 @@
 
 | 문서 | 설명 |
 |---|---|
-| `docs/01_프로덕트_기획서_v2.0.md` | 기획 원본 (v3.0) |
-| `docs/02_API_통합_명세서_v2.0.md` | API 문서 (v3.0, 33개 엔드포인트) |
-| `docs/03_전체_플로우_정의서_v2.0.md` | 유저 여정 + 데이터 흐름 (v3.0) |
-| `docs/04_기술결정사항_DECISIONS.md` | 왜 이렇게 만들었는지 |
-| `docs/05_페이지별_개발가이드_v2.0.md` | 페이지별 상세 (v3.0) |
-| `docs/06_마이북_리팩토링_변경사항.md` | 마이북 개편 + 백엔드 요청 |
-| `docs/PROGRESS.md` | 개발 진행 현황 (v3.0) |
+| `docs/프론트엔드_전달사항_v2.0.md` | v2.0 기획 + API 명세 + 페이지별 가이드 |
 
 ---
 
@@ -61,34 +55,39 @@ src/
     globals.css                ← 디자인 토큰 + 다크모드
     (public)/
       layout.tsx               ← 공개 레이아웃 (헤더: 로고+테마+로그인)
-      page.tsx                 ← 랜딩/시뮬레이션 위저드 (/)
+      page.tsx                 ← 랜딩/시뮬레이션 8스텝 위저드 (/)
     (app)/
-      layout.tsx               ← 인증 가드 + SideNav/BottomNav + 자동 온보딩
-      home/page.tsx            ← 페이스메이커 (/home)
-      book/page.tsx            ← 마이북 (/book)
-      book/[id]/page.tsx       ← 리포트 상세 (/book/[id]?type=)
-      my/page.tsx              ← 마이페이지 (/my)
+      layout.tsx               ← 인증 가드 + SideNav/BottomNav(4탭) + 자동 온보딩
+      pacemaker/page.tsx       ← 페이스메이커 (/pacemaker) — 퀴즈1개 + 출석 + AI메시지
+      money-book/page.tsx      ← 머니북 서점 (/money-book)
+      money-book/[id]/page.tsx ← 책 상세 + 동적 폼 구매
+      my-book/page.tsx         ← 마이북 머니레터 (/my-book)
+      my-book/report/[id]/     ← 상세 리포트 열람
+      my-book/books/[purchaseId]/ ← 구매한 책 열람 + 하이라이트
+      my-book/highlights/      ← 하이라이트 모아보기
+      my-book/scraps/          ← 스크랩 모아보기 (URL + 퀴즈)
+      my-book/wrong-notes/     ← 오답 노트
+      my-page/page.tsx         ← 마이페이지 (/my-page) — 프로필 + 출석 + 뱃지
       admin/
-        users/page.tsx         ← 어드민 유저 (/admin/users)
-        quizzes/page.tsx       ← 어드민 퀴즈 (/admin/quizzes)
-        config/page.tsx        ← 어드민 설정 (/admin/config)
+        users/page.tsx         ← 어드민 유저
+        quizzes/page.tsx       ← 어드민 퀴즈
+        config/page.tsx        ← 어드민 설정
     api/
       auth/[...nextauth]/route.ts  ← NextAuth 핸들러
       proxy/[...path]/route.ts     ← CORS 프록시
 
   components/
     providers/                 ← QueryProvider, ThemeInit
-    common/                    ← SideNav, BottomNav, GradeBadge, AmountDisplay,
+    common/                    ← SideNav, BottomNav(4탭), GradeBadge, AmountDisplay,
                                  SkeletonLoader, Markdown, LoginSheet, ConfirmDialog,
                                  GradeProvider, ThemeToggle
     simulation/                ← SimulationResult, StepCurrentReport, StepFutureProjection,
                                  StepActionCTA, InvestmentChart, TrajectoryChart
-    pacemaker/                 ← DailySurplus, TodayMessage, TrafficLight, InvestmentTier
-    book/                      ← CategoryTabs, ContentListItem, MonthlyReportCreate,
-                                 MonthlyReportV2Detail, V6ReportDetail, ReportSections (26개 섹션)
+    pacemaker/                 ← TodayMessage
+    book/                      ← V6ReportDetail, ReportSections (26개 섹션)
 
   hooks/
-    useApi.ts                  ← TanStack Query 훅 (33개 API 엔드포인트)
+    useApi.ts                  ← TanStack Query 훅 (퀴즈/출석/머니북/마이북/하이라이트 등)
     useFocusTrap.ts            ← 모달 포커스 관리
 
   lib/
@@ -101,16 +100,18 @@ src/
 
   store/
     userStore.ts               ← 유저 정보 (id, nickname, role, isLoggedIn)
-    financeStore.ts            ← 재무 프로필 (나이, 소득, 등급, 잉여자금, 변동비)
+    financeStore.ts            ← 재무 프로필 (나이, 소득, 투자액, 등급, 잉여자금, availableBudget)
     simulationStore.ts         ← 시뮬레이션 입력 (sessionStorage 영속화)
     constantsStore.ts          ← 운영 상수
     themeStore.ts              ← 테마 (light/dark)
 
   types/
     api.ts                     ← API 응답 타입, User, Admin 타입
-    finance.ts                 ← 재무 타입, 시뮬레이션 타입, 등급
-    book.ts                    ← 마이북 타입 (체크, 퀴즈, 리포트, 스크랩)
-    monthly-report-v2.ts       ← 월간 리포트 v2 타입
+    finance.ts                 ← 재무 타입, 시뮬레이션 타입, 등급, AvailableBudget
+    book.ts                    ← 페이스메이커(PacemakerToday, TodayQuiz, Attendance), 리포트, 스크랩
+    quiz.ts                    ← 퀴즈 스크랩, 난이도, 출석 스트릭/히스토리
+    money-book.ts              ← 머니북 서점 (BookListItem, BookDetail, RequiredField, Purchase)
+    my-book.ts                 ← 마이북 (Overview, BookReader, Highlight, Scraps)
     report-v6.ts               ← V6 섹션 리포트 타입 (26개 섹션)
 ```
 
@@ -122,16 +123,16 @@ src/
 
 | 종류 | 도구 | 용도 |
 |---|---|---|
-| 서버 상태 | TanStack Query | API 데이터 (캐시/갱신, 18개 쿼리 키) |
+| 서버 상태 | TanStack Query | API 데이터 (캐시/갱신) |
 | 클라이언트 상태 | Zustand (5개) | 유저, 재무, 시뮬레이션, 상수, 테마 |
 
 ### 인증 흐름
 
 ```
-랜딩(/) → 시뮬레이션 → "카카오로 시작하기"
+랜딩(/) → 시뮬레이션(8스텝) → "카카오로 시작하기"
 → NextAuth → 카카오 토큰 → POST /auth/kakao → JWT (sessionStorage)
-→ 신규: 시뮬레이션 데이터로 POST /auth/onboarding → /home
-→ 기존: GET /finance/profile + GET /users/me → /home
+→ 신규: POST /auth/onboarding (monthlyInvestment 포함) → /pacemaker
+→ 기존: GET /finance/profile + GET /users/me → /pacemaker
 ```
 
 ### 등급 판정 (lib/grade.ts)
@@ -143,14 +144,6 @@ YELLOW : 50% ~ 70%
 GREEN  : < 50%
 ```
 
-### 금액 포맷 (lib/format.ts)
-
-```typescript
-formatWon(130000000) → "1억 3000만 원"
-formatWon(2300000)   → "230만 원"
-formatWonRaw(36666)  → "36,666원"
-```
-
 ---
 
 ## 페이지별 API 매핑
@@ -160,11 +153,15 @@ formatWonRaw(36666)  → "36,666원"
 | 랜딩(시뮬레이션) | 프론트 자체 계산 (`lib/simulation.ts`) |
 | 로그인 | `POST /auth/kakao` |
 | 온보딩 (자동) | `POST /auth/onboarding` |
-| 페이스메이커(홈) | `GET /pacemaker/today`, `POST /pacemaker/quiz/:quizId/answer`, `POST /pacemaker/feedback`, `GET /pacemaker/daily-checks`, `GET /pacemaker/weekly-summary`, `POST /pacemaker/daily-check`, `GET /pacemaker/monthly-finalize-status`, `POST /pacemaker/monthly-finalize`, `POST /pacemaker/monthly-finalize/cancel` |
-| 마이북 > 리포트 | `GET /book/detailed-reports`, `GET /book/detailed-reports/:id`, `GET /book/monthly-reports`, `GET /book/monthly-reports/:id`, `GET /book/monthly-reports/proposals`, `POST /book/monthly-reports` |
-| 마이북 > 오답노트 | `GET /book/wrong-notes` |
-| 마이북 > 스크랩 | `GET /book/scraps`, `POST /book/scraps`, `DELETE /book/scraps/:id` |
-| 마이페이지 | `GET /finance/profile`, `PATCH /finance/profile`, `GET /users/me` |
+| 페이스메이커 | `GET /pacemaker/today`, `POST /quiz/:id/answer`, `POST /quiz/:id/scrap`, `PATCH /quiz/level`, `POST /pacemaker/feedback` |
+| 머니북(서점) | `GET /money-book`, `GET /money-book/:id`, `POST /money-book/:id/purchase` |
+| 마이북 > 메인 | `GET /my-book/overview` |
+| 마이북 > 리포트 | `GET /book/detailed-reports`, `GET /book/detailed-reports/:id` |
+| 마이북 > 책 열람 | `GET /my-book/books/:purchaseId`, `POST /my-book/books/:purchaseId/highlights`, `DELETE /my-book/highlights/:id` |
+| 마이북 > 하이라이트 | `GET /my-book/highlights` |
+| 마이북 > 스크랩 | `GET /my-book/scraps`, `POST /my-book/generate-from-scraps`, `GET /book/scraps`, `POST /book/scraps`, `DELETE /book/scraps/:id` |
+| 마이북 > 오답노트 | `GET /my-book/wrong-notes` |
+| 마이페이지 | `GET /finance/profile`, `PATCH /finance/profile`, `GET /users/me`, `GET /attendance/streak`, `GET /attendance/history` |
 | 어드민 | `GET /admin/users`, `GET /admin/quizzes`, `PATCH /admin/constants/:key` |
 | 공통 | `GET /constants` |
 
@@ -195,4 +192,4 @@ formatWonRaw(36666)  → "36,666원"
 
 ---
 
-*머니런 프론트엔드 CLAUDE.md v3.0 — 2026.04.08*
+*머니런 프론트엔드 CLAUDE.md v4.0 — 2026.04.11*

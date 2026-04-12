@@ -7,12 +7,19 @@ export interface VariableCost {
   daysInMonth: number;
 }
 
+export interface AvailableBudget {
+  monthly: number;
+  weekly: number;
+  daily: number;
+}
+
 export interface FinanceProfile {
   nickname: string;
   age: number;
   retirementAge: number;
   pensionStartAge: number;
   monthlyIncome: number;
+  monthlyInvestment: number;
   monthlyFixedCost: number;
   monthlyVariableCost: number;
   monthlyExpense: number;
@@ -21,6 +28,7 @@ export interface FinanceProfile {
   vestingPeriod: number;
   grade: Grade;
   variableCost: VariableCost;
+  availableBudget: AvailableBudget;
   lastUpdated: string;
   isStale: boolean;
 }
@@ -31,6 +39,7 @@ export interface SimulationInput {
   retirementAge: number;
   pensionStartAge: number;
   monthlyIncome: number;
+  monthlyInvestment: number;
   monthlyFixedCost: number;
   monthlyVariableCost: number;
 }
@@ -59,6 +68,7 @@ export interface OnboardingRequest {
   retirementAge: number;
   pensionStartAge: number;
   monthlyIncome: number;
+  monthlyInvestment: number;
   monthlyFixedCost: number;
   monthlyVariableCost: number;
 }
@@ -69,7 +79,8 @@ export interface OnboardingResponse {
   surplus: number;
   investmentPeriod: number;
   vestingPeriod: number;
-  variableCost: VariableCost;
+  availableBudget: AvailableBudget;
+  firstReportId: string;
 }
 
 export interface FinanceProfileUpdateResponse {

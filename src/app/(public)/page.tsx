@@ -6,7 +6,7 @@ import { useSimulationStore } from '@/store/simulationStore';
 import { calculateSimulation, calculateEnhancedSimulation } from '@/lib/simulation';
 import { formatWon } from '@/lib/format';
 import SimulationResult from '@/components/simulation/SimulationResult';
-import { User, Calendar, CalendarClock, Wallet, PiggyBank, ShoppingCart, ChevronRight, ChevronLeft } from 'lucide-react';
+import { User, Calendar, CalendarClock, Wallet, TrendingUp, PiggyBank, ShoppingCart, ChevronRight, ChevronLeft } from 'lucide-react';
 
 /* ─── 스텝 정의 ─── */
 
@@ -16,6 +16,7 @@ const STEPS = [
   { key: 'retirement', icon: <CalendarClock size={20} />, label: '은퇴 예정 나이', sub: '몇 살까지 일할 계획인가요?' },
   { key: 'pension', icon: <CalendarClock size={20} />, label: '은퇴자금 수령 나이', sub: '국민연금 기준 보통 65세예요' },
   { key: 'income', icon: <Wallet size={20} />, label: '월 실수령액', sub: '세후 실제 통장에 들어오는 금액' },
+  { key: 'investment', icon: <TrendingUp size={20} />, label: '월 투자액', sub: '현재 투자하고 있는 월 금액' },
   { key: 'fixed', icon: <PiggyBank size={20} />, label: '월 고정비', sub: '월세, 보험, 구독, 공과금 등' },
   { key: 'variable', icon: <ShoppingCart size={20} />, label: '월 변동비', sub: '쇼핑, 술, 커피, 외식 등' },
 ] as const;
@@ -129,6 +130,7 @@ export default function LandingPage() {
       case 'retirement': return input.retirementAge ? String(input.retirementAge) : '';
       case 'pension': return input.pensionStartAge ? String(input.pensionStartAge) : '';
       case 'income': return input.monthlyIncome ? String(input.monthlyIncome / 10000) : '';
+      case 'investment': return input.monthlyInvestment ? String(input.monthlyInvestment / 10000) : '';
       case 'fixed': return input.monthlyFixedCost ? String(input.monthlyFixedCost / 10000) : '';
       case 'variable': return input.monthlyVariableCost ? String(input.monthlyVariableCost / 10000) : '';
     }
@@ -137,7 +139,7 @@ export default function LandingPage() {
   function getSuffix(): string {
     switch (currentStep.key) {
       case 'age': case 'retirement': case 'pension': return '세';
-      case 'income': case 'fixed': case 'variable': return '만 원';
+      case 'income': case 'investment': case 'fixed': case 'variable': return '만 원';
       default: return '';
     }
   }
@@ -149,6 +151,7 @@ export default function LandingPage() {
       case 'retirement': return '55';
       case 'pension': return '65';
       case 'income': return '300';
+      case 'investment': return '50';
       case 'fixed': return '150';
       case 'variable': return '100';
     }
@@ -184,24 +187,31 @@ export default function LandingPage() {
         const v = parseInt(raw.replace(/[^0-9]/g, '').slice(0, 4), 10) || 0;
         const income = Math.round(v * 10000);
         const updates: Partial<typeof input> = { monthlyIncome: income };
-        const total = input.monthlyFixedCost + input.monthlyVariableCost;
+        const total = input.monthlyInvestment + input.monthlyFixedCost + input.monthlyVariableCost;
         if (total > income) {
           const ratio = income > 0 ? income / total : 0;
+          updates.monthlyInvestment = Math.floor(input.monthlyInvestment * ratio);
           updates.monthlyFixedCost = Math.floor(input.monthlyFixedCost * ratio);
           updates.monthlyVariableCost = Math.floor(input.monthlyVariableCost * ratio);
         }
         setInput(updates);
         break;
       }
+      case 'investment': {
+        const won = Math.round((parseInt(raw.replace(/[^0-9]/g, '').slice(0, 4), 10) || 0) * 10000);
+        const max = input.monthlyIncome;
+        setInput({ monthlyInvestment: Math.min(won, Math.max(0, max)) });
+        break;
+      }
       case 'fixed': {
         const won = Math.round((parseInt(raw.replace(/[^0-9]/g, '').slice(0, 4), 10) || 0) * 10000);
-        const max = input.monthlyIncome - input.monthlyVariableCost;
+        const max = input.monthlyIncome - input.monthlyInvestment - input.monthlyVariableCost;
         setInput({ monthlyFixedCost: Math.min(won, Math.max(0, max)) });
         break;
       }
       case 'variable': {
         const won = Math.round((parseInt(raw.replace(/[^0-9]/g, '').slice(0, 4), 10) || 0) * 10000);
-        const max = input.monthlyIncome - input.monthlyFixedCost;
+        const max = input.monthlyIncome - input.monthlyInvestment - input.monthlyFixedCost;
         setInput({ monthlyVariableCost: Math.min(won, Math.max(0, max)) });
         break;
       }

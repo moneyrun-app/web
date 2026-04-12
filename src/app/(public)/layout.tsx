@@ -12,7 +12,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button
-            onClick={() => signIn('kakao', { callbackUrl: '/home' })}
+            onClick={() => signIn('kakao', { callbackUrl: '/pacemaker' })}
             className="px-4 h-9 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-surface transition-colors"
           >
             로그인

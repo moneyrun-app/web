@@ -14,10 +14,11 @@ function fixEmphasis(text: string): string {
 }
 
 interface Props {
-  children: string;
+  children: string | null | undefined;
 }
 
 export default function Markdown({ children }: Props) {
+  if (!children) return null;
   return (
     <ReactMarkdown rehypePlugins={[rehypeRaw]}>
       {fixEmphasis(children)}
