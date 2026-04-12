@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Library, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
-import { useMyBookOverview, useDetailedReportStatus, useWrongNotes, useHighlights } from '@/hooks/useApi';
+import { Library, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp, Bookmark, Link, HelpCircle, ExternalLink, Plus, X } from 'lucide-react';
+import { useMyBookOverview, useDetailedReportStatus, useWrongNotes, useHighlights, useMyBookScraps, useDeleteHighlight, useDeleteScrap, useScrapQuiz, useCreateScrap } from '@/hooks/useApi';
+import { decodeHtml } from '@/lib/format';
+import { getCategoryLabel } from '@/lib/category';
 import Markdown from '@/components/common/Markdown';
 import BookCover from '@/components/book/BookCover';
 
@@ -21,7 +23,31 @@ export default function MyBookPage() {
   const { data: reportStatus } = useDetailedReportStatus();
   const { data: wrongNotesData, isLoading: wrongNotesLoading } = useWrongNotes(activeTab === '오답노트');
   const { data: highlightsData } = useHighlights();
+  const { data: scrapsData } = useMyBookScraps();
+  const deleteHighlightMut = useDeleteHighlight();
+  const deleteScrapMut = useDeleteScrap();
+  const toggleQuizScrap = useScrapQuiz();
+  const createScrap = useCreateScrap();
   const [collapsedNotes, setCollapsedNotes] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+
+  const handleCreateScrap = () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    createScrap.mutate(trimmed, {
+      onSuccess: () => { setUrlInput(''); setShowUrlInput(false); },
+    });
+  };
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   if (isLoading) {
     return (
@@ -110,50 +136,219 @@ export default function MyBookPage() {
       )}
 
       {/* 스크랩 탭 */}
-      {activeTab === '스크랩' && (
-        <div className="space-y-3">
-          {/* 요약 */}
-          <div className="bg-surface rounded-xl p-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium">총 스크랩</p>
-              <p className="text-lg font-bold">{data.scraps?.totalCount ?? 0}개</p>
-            </div>
-            <div className="flex gap-3 text-[10px] text-sub">
-              <span>URL {data.scraps?.urlScrapCount ?? 0}</span>
-              <span>퀴즈 {data.scraps?.quizScrapCount ?? 0}</span>
-              <span>하이라이트 {(highlightsData ?? []).length}</span>
-            </div>
-          </div>
+      {activeTab === '스크랩' && (() => {
+        const highlights = highlightsData ?? [];
+        const urlScraps = scrapsData?.urlScraps ?? [];
+        const quizScraps = scrapsData?.quizScraps ?? [];
+        const hlShowAll = expandedSections.has('highlight');
+        const urlShowAll = expandedSections.has('url');
+        const quizShowAll = expandedSections.has('quiz');
 
-          {/* 최근 하이라이트 미리보기 */}
-          {(highlightsData ?? []).length > 0 && (
+        return (
+          <div className="space-y-5">
+            {/* 하이라이트 — 클릭 시 책으로 이동 */}
             <div>
               <h3 className="text-xs font-semibold text-sub mb-2 flex items-center gap-1">
-                <Bookmark size={12} /> 최근 하이라이트
+                <Bookmark size={12} /> 하이라이트 <span className="text-placeholder">{highlights.length}</span>
               </h3>
-              <div className="space-y-1.5">
-                {(highlightsData ?? []).slice(0, 3).map((hl) => (
-                  <div key={hl.id} className="flex items-start gap-2 p-2.5 rounded-lg bg-background border border-border">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: HIGHLIGHT_COLORS[hl.color] ?? '#FFE566' }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-foreground line-clamp-1">{hl.sentenceText}</p>
-                      <p className="text-[10px] text-placeholder">{hl.bookTitle}</p>
-                    </div>
+              {highlights.length === 0 ? (
+                <p className="text-xs text-placeholder py-4 text-center bg-surface rounded-xl">책에서 문장을 클릭해 스크랩해보세요</p>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    {highlights.slice(0, hlShowAll ? undefined : 5).map((hl) => (
+                      <button
+                        key={hl.id}
+                        onClick={() => router.push(`/my-book/books/${hl.purchaseId}`)}
+                        className="w-full text-left flex items-start gap-2 p-2.5 rounded-xl bg-background border border-border hover:shadow-sm transition-shadow"
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ backgroundColor: HIGHLIGHT_COLORS[hl.color] ?? '#FFE566' }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-foreground line-clamp-2">{hl.sentenceText}</p>
+                          <p className="text-[10px] text-placeholder mt-0.5">{hl.bookTitle}</p>
+                        </div>
+                        <span
+                          role="button"
+                          onClick={(e) => { e.stopPropagation(); deleteHighlightMut.mutate(hl.id); }}
+                          className="text-[10px] text-placeholder hover:text-red-500 shrink-0"
+                        >삭제</span>
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
+                  {highlights.length > 5 && (
+                    <button onClick={() => toggleSection('highlight')} className="w-full text-center text-xs text-sub mt-2 py-1.5 hover:text-foreground flex items-center justify-center gap-0.5">
+                      {hlShowAll ? '접기' : `더보기 (${highlights.length - 5}개)`}
+                      {hlShowAll ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-          )}
 
-          {/* 전체보기 버튼 */}
-          <button
-            onClick={() => router.push('/my-book/scraps')}
-            className="w-full h-11 bg-foreground text-background text-sm font-medium rounded-xl flex items-center justify-center gap-1"
-          >
-            <Bookmark size={14} /> 스크랩 전체보기
-          </button>
-        </div>
-      )}
+            {/* URL 스크랩 — 클릭 시 아코디언 펼침 */}
+            <div>
+              <h3 className="text-xs font-semibold text-sub mb-2 flex items-center gap-1">
+                <Link size={12} /> URL 스크랩 <span className="text-placeholder">{urlScraps.length}</span>
+              </h3>
+              {urlScraps.length === 0 ? (
+                <p className="text-xs text-placeholder py-4 text-center bg-surface rounded-xl">스크랩한 URL이 없어요</p>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    {urlScraps.slice(0, urlShowAll ? undefined : 5).map((item) => {
+                      const isOpen = expandedSections.has(`url-${item.id}`);
+                      const displayText = item.aiSummary || item.bodyText;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => toggleSection(`url-${item.id}`)}
+                          className="w-full text-left bg-background border border-border rounded-xl p-3 hover:shadow-sm transition-shadow"
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[10px] text-placeholder">{item.channel}{item.creator ? ` · ${item.creator}` : ''}</span>
+                          </div>
+                          {item.ogImageUrl && isOpen && (
+                            <div className="w-full h-32 rounded-lg overflow-hidden mb-2 bg-surface">
+                              <img src={item.ogImageUrl} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <p className="text-xs font-medium text-foreground">{decodeHtml(item.title)}</p>
+                          {displayText && (
+                            <p className={`text-[10px] text-sub mt-0.5 ${isOpen ? '' : 'line-clamp-1'}`}>{decodeHtml(displayText)}</p>
+                          )}
+                          {isOpen && (
+                            <div className="mt-2 pt-2 border-t border-border flex items-center justify-between">
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[10px] text-accent font-medium hover:underline"
+                              >
+                                <ExternalLink size={10} />원문 보기
+                              </a>
+                              <span
+                                role="button"
+                                onClick={(e) => { e.stopPropagation(); deleteScrapMut.mutate(item.id); }}
+                                className="text-[10px] text-placeholder hover:text-red-500"
+                              >삭제</span>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {urlScraps.length > 5 && (
+                    <button onClick={() => toggleSection('url')} className="w-full text-center text-xs text-sub mt-2 py-1.5 hover:text-foreground flex items-center justify-center gap-0.5">
+                      {urlShowAll ? '접기' : `더보기 (${urlScraps.length - 5}개)`}
+                      {urlShowAll ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* 퀴즈 스크랩 — 클릭 시 아코디언 펼침 */}
+            <div>
+              <h3 className="text-xs font-semibold text-sub mb-2 flex items-center gap-1">
+                <HelpCircle size={12} /> 퀴즈 스크랩 <span className="text-placeholder">{quizScraps.length}</span>
+              </h3>
+              {quizScraps.length === 0 ? (
+                <p className="text-xs text-placeholder py-4 text-center bg-surface rounded-xl">퀴즈 풀고 스크랩 버튼을 눌러보세요</p>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    {quizScraps.slice(0, quizShowAll ? undefined : 5).map((quiz) => {
+                      const isOpen = expandedSections.has(`quiz-${quiz.id}`);
+                      return (
+                        <button
+                          key={quiz.id}
+                          onClick={() => toggleSection(`quiz-${quiz.id}`)}
+                          className="w-full text-left bg-background border border-border rounded-xl p-3 hover:shadow-sm transition-shadow"
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            {quiz.category && (
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface text-sub">{getCategoryLabel(quiz.category)}</span>
+                            )}
+                          </div>
+                          <p className="text-xs font-medium text-foreground">{quiz.question}</p>
+                          <p className="text-[10px] text-sub mt-0.5 line-clamp-1">{quiz.briefExplanation}</p>
+                          {isOpen && (
+                            <div className="mt-2 pt-2 border-t border-border space-y-1.5">
+                              {quiz.choices?.map((choice: string, i: number) => (
+                                <div key={i} className={`text-[11px] px-2 py-1 rounded-lg ${i === quiz.correctAnswer ? 'bg-grade-green-bg text-grade-green-text font-medium' : 'text-sub'}`}>
+                                  {String.fromCharCode(65 + i)}. {choice}
+                                </div>
+                              ))}
+                              {quiz.detailedExplanation && (
+                                <p className="text-[10px] text-sub bg-surface rounded-lg p-2">{quiz.detailedExplanation}</p>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center justify-end mt-1.5">
+                            <span
+                              role="button"
+                              onClick={(e) => { e.stopPropagation(); toggleQuizScrap.mutate({ quizId: quiz.quizId }); }}
+                              className="text-[10px] text-placeholder hover:text-red-500"
+                            >해제</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {quizScraps.length > 5 && (
+                    <button onClick={() => toggleSection('quiz')} className="w-full text-center text-xs text-sub mt-2 py-1.5 hover:text-foreground flex items-center justify-center gap-0.5">
+                      {quizShowAll ? '접기' : `더보기 (${quizScraps.length - 5}개)`}
+                      {quizShowAll ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            {/* URL 스크랩 추가 플로팅 버튼 */}
+            <button
+              onClick={() => setShowUrlInput(true)}
+              className="fixed bottom-24 right-5 md:bottom-8 md:right-8 z-50 w-12 h-12 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:shadow-xl active:scale-95 transition-all"
+              aria-label="URL 스크랩 추가"
+            >
+              <Plus size={20} />
+            </button>
+
+            {/* URL 입력 모달 */}
+            {showUrlInput && (
+              <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-5" onClick={() => setShowUrlInput(false)}>
+                <div className="w-full max-w-lg bg-background rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold">URL 스크랩 추가</h3>
+                    <button onClick={() => setShowUrlInput(false)} className="p-1 rounded-lg hover:bg-surface"><X size={18} /></button>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center gap-2 border border-border rounded-xl px-3 py-2.5 bg-surface focus-within:border-foreground transition-colors">
+                      <Link size={16} className="text-sub shrink-0" />
+                      <input
+                        type="url"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateScrap()}
+                        placeholder="https://..."
+                        autoFocus
+                        className="flex-1 bg-transparent text-sm outline-none placeholder:text-placeholder"
+                      />
+                    </div>
+                    <button
+                      onClick={handleCreateScrap}
+                      disabled={!urlInput.trim() || createScrap.isPending}
+                      className="h-11 px-4 text-sm font-medium rounded-xl bg-foreground text-background disabled:opacity-40 shrink-0"
+                    >
+                      {createScrap.isPending ? <Loader2 size={16} className="animate-spin" /> : '추가'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 오답노트 탭 */}
       {activeTab === '오답노트' && (

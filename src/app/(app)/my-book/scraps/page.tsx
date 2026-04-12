@@ -32,7 +32,7 @@ export default function ScrapsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<ScrapTab>('all');
   const { data: overview } = useMyBookOverview();
-  const queryType = tab === 'all' ? undefined : tab === 'highlight' ? undefined : tab;
+  const queryType = tab === 'all' ? undefined : tab;
   const { data, isLoading } = useMyBookScraps(queryType);
   const deleteScrap = useDeleteScrap();
   const toggleQuizScrap = useScrapQuiz();
@@ -42,10 +42,10 @@ export default function ScrapsPage() {
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const scrapsInfo = overview?.scraps;
-  const canGenerate = scrapsInfo?.canGenerateBook ?? false;
-  const totalCount = data?.totalCount ?? scrapsInfo?.totalCount ?? 0;
+  const canGenerate = overview?.canGenerateBook ?? false;
+  const totalCount = data?.totalCount ?? (overview?.scrapCounts?.total ?? 0);
 
   const urlScraps = data?.urlScraps ?? [];
   const quizScraps = data?.quizScraps ?? [];
@@ -137,45 +137,119 @@ export default function ScrapsPage() {
       ) : (
         <div className="space-y-2.5">
           {/* URL 스크랩 */}
-          {showUrl && urlScraps.map((item) => (
-            <div key={`url-${item.id}`} className="bg-background border border-border rounded-xl p-3.5">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Link size={12} className="text-sub" />
-                {CHANNEL_ICONS[item.channel] && (
-                  <span className="text-[10px] font-bold text-white bg-red-500 px-1 py-0.5 rounded text-center leading-none">
-                    {CHANNEL_ICONS[item.channel]}
-                  </span>
+          {showUrl && urlScraps.map((item) => {
+            const isExpanded = expandedId === `url-${item.id}`;
+            const displayText = item.aiSummary || item.bodyText;
+            return (
+              <button
+                key={`url-${item.id}`}
+                onClick={() => setExpandedId(isExpanded ? null : `url-${item.id}`)}
+                className="w-full text-left bg-background border border-border rounded-xl p-3.5 hover:shadow-sm transition-shadow"
+              >
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Link size={12} className="text-sub" />
+                  {CHANNEL_ICONS[item.channel] && (
+                    <span className="text-[10px] font-bold text-white bg-red-500 px-1 py-0.5 rounded text-center leading-none">
+                      {CHANNEL_ICONS[item.channel]}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-sub">{item.channel}</span>
+                  {item.creator && <span className="text-[10px] text-placeholder">· {item.creator}</span>}
+                </div>
+                {item.ogImageUrl && isExpanded && (
+                  <div className="w-full h-36 rounded-lg overflow-hidden mb-2 bg-surface">
+                    <img src={item.ogImageUrl} alt="" className="w-full h-full object-cover" />
+                  </div>
                 )}
-                <span className="text-[10px] text-sub">{item.channel}</span>
-                {item.creator && <span className="text-[10px] text-placeholder">· {item.creator}</span>}
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1">{decodeHtml(item.title)}</p>
-              <p className="text-xs text-sub line-clamp-2">{decodeHtml(item.aiSummary)}</p>
-              <div className="flex items-center justify-between mt-2">
-                <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-accent hover:underline">
-                  <ExternalLink size={10} />원문
-                </a>
-                <button onClick={() => deleteScrap.mutate(item.id)} className="text-[10px] text-placeholder hover:text-red-500">삭제</button>
-              </div>
-            </div>
-          ))}
+                <p className="text-sm font-medium text-foreground mb-1">{decodeHtml(item.title)}</p>
+                {displayText && (
+                  <p className={`text-xs text-sub ${isExpanded ? '' : 'line-clamp-2'}`}>
+                    {decodeHtml(displayText)}
+                  </p>
+                )}
+
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-xs text-accent font-medium hover:underline"
+                    >
+                      <ExternalLink size={12} />원문 보기
+                    </a>
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); deleteScrap.mutate(item.id); }}
+                      className="text-[10px] text-placeholder hover:text-red-500"
+                    >
+                      삭제
+                    </span>
+                  </div>
+                )}
+
+                {!isExpanded && (
+                  <div className="flex items-center justify-end mt-2">
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); deleteScrap.mutate(item.id); }}
+                      className="text-[10px] text-placeholder hover:text-red-500"
+                    >
+                      삭제
+                    </span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
 
           {/* 퀴즈 스크랩 */}
-          {showQuiz && quizScraps.map((item) => (
-            <div key={`quiz-${item.id}`} className="bg-background border border-border rounded-xl p-3.5">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <HelpCircle size={12} className="text-sub" />
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface text-sub">Lv.{item.difficultyLevel}</span>
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1">{item.question}</p>
-              <p className="text-xs text-sub line-clamp-2">{item.briefExplanation}</p>
-              {item.note && <p className="text-[10px] text-placeholder mt-1 italic">메모: {item.note}</p>}
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[10px] text-placeholder">정답: {item.choices[item.correctAnswer]}</span>
-                <button onClick={() => toggleQuizScrap.mutate({ quizId: item.quizId })} className="text-[10px] text-placeholder hover:text-red-500">스크랩 해제</button>
-              </div>
-            </div>
-          ))}
+          {showQuiz && quizScraps.map((item) => {
+            const isExpanded = expandedId === `quiz-${item.id}`;
+            return (
+              <button
+                key={`quiz-${item.id}`}
+                onClick={() => setExpandedId(isExpanded ? null : `quiz-${item.id}`)}
+                className="w-full text-left bg-background border border-border rounded-xl p-3.5 hover:shadow-sm transition-shadow"
+              >
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <HelpCircle size={12} className="text-sub" />
+                  {item.category && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface text-sub">{getCategoryLabel(item.category)}</span>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-foreground mb-1">{item.question}</p>
+                <p className="text-xs text-sub line-clamp-2">{item.briefExplanation}</p>
+                {item.note && <p className="text-[10px] text-placeholder mt-1 italic">메모: {item.note}</p>}
+
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t border-border space-y-2">
+                    <div className="space-y-1">
+                      {item.choices?.map((choice: string, i: number) => (
+                        <div key={i} className={`text-xs px-2.5 py-1.5 rounded-lg ${i === item.correctAnswer ? 'bg-green-50 text-green-700 font-medium dark:bg-green-900/20 dark:text-green-400' : 'text-sub'}`}>
+                          {String.fromCharCode(65 + i)}. {choice}
+                        </div>
+                      ))}
+                    </div>
+                    {item.detailedExplanation && (
+                      <p className="text-xs text-sub bg-surface rounded-lg p-2.5">{item.detailedExplanation}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end mt-2">
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); toggleQuizScrap.mutate({ quizId: item.quizId }); }}
+                    className="text-[10px] text-placeholder hover:text-red-500"
+                  >
+                    스크랩 해제
+                  </span>
+                </div>
+              </button>
+            );
+          })}
 
           {/* 하이라이트 */}
           {showHighlight && highlightScraps.map((item) => (

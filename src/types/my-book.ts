@@ -11,14 +11,14 @@ export interface MyBookOverview {
   } | null;
 
   purchasedBooks: PurchasedBook[];
-  totalHighlights: number;
+  highlightCount: number;
 
-  scraps: {
-    urlScrapCount: number;
-    quizScrapCount: number;
-    totalCount: number;
-    canGenerateBook: boolean;
+  scrapCounts: {
+    url: number;
+    quiz: number;
+    total: number;
   };
+  canGenerateBook: boolean;
 }
 
 export interface PurchasedBook {
@@ -99,22 +99,28 @@ export interface GenerateFromScrapsResponse {
 
 export interface UrlScrap {
   id: string;
+  type: 'url';
   url: string;
   channel: ScrapChannel;
   creator: string | null;
   title: string;
-  aiSummary: string;
+  bodyText: string | null;
+  ogImageUrl: string | null;
+  aiSummary: string | null;
+  scrapCount: number;
   createdAt: string;
 }
 
 export interface QuizScrap {
   id: string;
+  type: 'quiz';
   quizId: string;
   question: string;
   choices: string[];
   correctAnswer: number;
   briefExplanation: string;
-  difficultyLevel: number;
+  detailedExplanation: string;
+  category: string;
   note: string | null;
   createdAt: string;
 }
@@ -134,6 +140,6 @@ export interface HighlightScrap {
 export interface MyBookScrapsResponse {
   urlScraps: UrlScrap[];
   quizScraps: QuizScrap[];
-  highlightScraps?: HighlightScrap[];
-  totalCount?: number;
+  highlightScraps: HighlightScrap[];
+  totalCount: number;
 }

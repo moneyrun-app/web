@@ -286,7 +286,7 @@ export function useGenerateFromScraps() {
   });
 }
 
-export function useMyBookScraps(type?: 'url' | 'quiz') {
+export function useMyBookScraps(type?: 'url' | 'quiz' | 'highlight') {
   return useQuery({
     queryKey: ['my-book-scraps', type],
     queryFn: () => api.get<MyBookScrapsResponse>(type ? `/my-book/scraps?type=${type}` : '/my-book/scraps'),
