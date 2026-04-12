@@ -2,12 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Bookmark, ExternalLink, Loader2, Plus, Link, X } from 'lucide-react';
-import { useMyBookScraps, useDeleteScrap, useScrapQuiz, useGenerateFromScraps, useMyBookOverview, useCreateScrap } from '@/hooks/useApi';
+import { ArrowLeft, Bookmark, ExternalLink, Loader2, Plus, Link, X, HelpCircle } from 'lucide-react';
+import { useMyBookScraps, useDeleteScrap, useScrapQuiz, useGenerateFromScraps, useMyBookOverview, useCreateScrap, useDeleteHighlight } from '@/hooks/useApi';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { decodeHtml } from '@/lib/format';
+import { getCategoryLabel } from '@/lib/category';
 
-type ScrapTab = 'all' | 'url' | 'quiz';
+type ScrapTab = 'all' | 'url' | 'quiz' | 'highlight';
+
+const TABS: { key: ScrapTab; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'url', label: 'URL 스크랩' },
+  { key: 'quiz', label: '퀴즈 스크랩' },
+  { key: 'highlight', label: '하이라이트' },
+];
 
 const CHANNEL_ICONS: Record<string, string> = {
   youtube: 'YT',
@@ -16,13 +24,19 @@ const CHANNEL_ICONS: Record<string, string> = {
   other: '',
 };
 
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  yellow: '#FFE566', green: '#8BE8A0', blue: '#85C4F0', pink: '#F0A0BE', orange: '#F0C080',
+};
+
 export default function ScrapsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<ScrapTab>('all');
   const { data: overview } = useMyBookOverview();
-  const { data, isLoading } = useMyBookScraps(tab === 'all' ? undefined : tab);
+  const queryType = tab === 'all' ? undefined : tab === 'highlight' ? undefined : tab;
+  const { data, isLoading } = useMyBookScraps(queryType);
   const deleteScrap = useDeleteScrap();
   const toggleQuizScrap = useScrapQuiz();
+  const deleteHighlight = useDeleteHighlight();
   const createScrap = useCreateScrap();
   const generateFromScraps = useGenerateFromScraps();
   const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
@@ -31,7 +45,17 @@ export default function ScrapsPage() {
 
   const scrapsInfo = overview?.scraps;
   const canGenerate = scrapsInfo?.canGenerateBook ?? false;
-  const totalCount = scrapsInfo?.totalCount ?? 0;
+  const totalCount = data?.totalCount ?? scrapsInfo?.totalCount ?? 0;
+
+  const urlScraps = data?.urlScraps ?? [];
+  const quizScraps = data?.quizScraps ?? [];
+  const highlightScraps = data?.highlightScraps ?? [];
+
+  const showUrl = tab === 'all' || tab === 'url';
+  const showQuiz = tab === 'all' || tab === 'quiz';
+  const showHighlight = tab === 'all' || tab === 'highlight';
+
+  const isEmpty = (showUrl ? urlScraps.length : 0) + (showQuiz ? quizScraps.length : 0) + (showHighlight ? highlightScraps.length : 0) === 0;
 
   const handleGenerate = () => {
     generateFromScraps.mutate(undefined, {
@@ -59,7 +83,7 @@ export default function ScrapsPage() {
         <button onClick={() => router.back()} aria-label="돌아가기" className="p-1.5 -ml-1.5 rounded-lg hover:bg-surface transition-colors">
           <ArrowLeft size={20} />
         </button>
-        <Bookmark size={20} className="text-blue-500" />
+        <Bookmark size={20} className="text-foreground" />
         <h1 className="text-lg font-bold">스크랩 모아보기</h1>
       </div>
 
@@ -70,33 +94,33 @@ export default function ScrapsPage() {
           {canGenerate && (
             <button
               onClick={() => setShowGenerateConfirm(true)}
-              className="h-8 px-3 text-xs font-medium rounded-lg bg-accent text-white"
+              className="h-8 px-3 text-xs font-medium rounded-lg bg-foreground text-background"
             >
               나만의 스크랩 책 만들기
             </button>
           )}
         </div>
-        {!canGenerate && totalCount > 0 && (
+        {!canGenerate && (
           <div>
             <div className="w-full bg-border rounded-full h-1.5 mb-1">
-              <div className="bg-accent h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, (totalCount / 100) * 100)}%` }} />
+              <div className="bg-foreground h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, (totalCount / 100) * 100)}%` }} />
             </div>
-            <p className="text-3xs text-sub">{100 - totalCount}개 더 모으면 나만의 책을 만들 수 있어요</p>
+            <p className="text-[10px] text-sub">{100 - totalCount}개 더 모으면 나만의 책을 만들 수 있어요</p>
           </div>
         )}
       </div>
 
       {/* 탭 필터 */}
-      <div className="flex gap-2 mb-4">
-        {([['all', '전체'], ['url', 'URL 스크랩'], ['quiz', '퀴즈 스크랩']] as const).map(([key, label]) => (
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        {TABS.map((t) => (
           <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              tab === key ? 'bg-foreground text-background' : 'bg-surface text-sub'
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              tab === t.key ? 'bg-foreground text-background' : 'bg-surface text-sub'
             }`}
           >
-            {label}
+            {t.label}
           </button>
         ))}
       </div>
@@ -105,64 +129,77 @@ export default function ScrapsPage() {
         <div className="space-y-3 animate-pulse">
           {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-surface rounded-2xl" />)}
         </div>
+      ) : isEmpty && !isLoading ? (
+        <div className="text-center py-12">
+          <Bookmark size={32} className="text-disabled mx-auto mb-2" />
+          <p className="text-sub text-sm">아직 스크랩이 없어요</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {/* URL 스크랩 */}
-          {(tab === 'all' || tab === 'url') && (data?.urlScraps ?? []).map((item) => (
-            <div key={item.id} className="bg-background border border-border rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-2">
+          {showUrl && urlScraps.map((item) => (
+            <div key={`url-${item.id}`} className="bg-background border border-border rounded-xl p-3.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Link size={12} className="text-sub" />
                 {CHANNEL_ICONS[item.channel] && (
-                  <span className="text-3xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-bold text-white bg-red-500 px-1 py-0.5 rounded text-center leading-none">
                     {CHANNEL_ICONS[item.channel]}
                   </span>
                 )}
-                <span className="text-xs text-sub">{item.channel}</span>
-                {item.creator && <span className="text-xs text-placeholder">&middot; {item.creator}</span>}
+                <span className="text-[10px] text-sub">{item.channel}</span>
+                {item.creator && <span className="text-[10px] text-placeholder">· {item.creator}</span>}
               </div>
-              <p className="text-sm font-semibold text-foreground mb-1">{decodeHtml(item.title)}</p>
-              <p className="text-xs text-sub line-clamp-2 leading-relaxed">{decodeHtml(item.aiSummary)}</p>
-              {item.channel === 'youtube' && (
-                <p className="text-3xs text-placeholder mt-1 italic">* 유튜브 자막 기반 AI 요약</p>
-              )}
+              <p className="text-sm font-medium text-foreground mb-1">{decodeHtml(item.title)}</p>
+              <p className="text-xs text-sub line-clamp-2">{decodeHtml(item.aiSummary)}</p>
               <div className="flex items-center justify-between mt-2">
-                <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
-                  <ExternalLink size={12} />원문 보기
+                <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-accent hover:underline">
+                  <ExternalLink size={10} />원문
                 </a>
-                <button
-                  onClick={() => deleteScrap.mutate(item.id)}
-                  disabled={deleteScrap.isPending}
-                  className="text-3xs text-placeholder hover:text-red-500"
-                >
-                  삭제
-                </button>
+                <button onClick={() => deleteScrap.mutate(item.id)} className="text-[10px] text-placeholder hover:text-red-500">삭제</button>
               </div>
             </div>
           ))}
 
           {/* 퀴즈 스크랩 */}
-          {(tab === 'all' || tab === 'quiz') && (data?.quizScraps ?? []).map((item) => (
-            <div key={item.id} className="bg-background border border-border rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-3xs font-bold px-1.5 py-0.5 rounded bg-accent/10 text-accent">Lv.{item.difficultyLevel}</span>
+          {showQuiz && quizScraps.map((item) => (
+            <div key={`quiz-${item.id}`} className="bg-background border border-border rounded-xl p-3.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <HelpCircle size={12} className="text-sub" />
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface text-sub">Lv.{item.difficultyLevel}</span>
               </div>
               <p className="text-sm font-medium text-foreground mb-1">{item.question}</p>
-              {item.note && <p className="text-xs text-sub italic mb-1">{item.note}</p>}
-              <p className="text-xs text-sub">{item.briefExplanation}</p>
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => toggleQuizScrap.mutate({ quizId: item.quizId })}
-                  disabled={toggleQuizScrap.isPending}
-                  className="text-3xs text-placeholder hover:text-red-500"
-                >
-                  스크랩 해제
-                </button>
+              <p className="text-xs text-sub line-clamp-2">{item.briefExplanation}</p>
+              {item.note && <p className="text-[10px] text-placeholder mt-1 italic">메모: {item.note}</p>}
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-placeholder">정답: {item.choices[item.correctAnswer]}</span>
+                <button onClick={() => toggleQuizScrap.mutate({ quizId: item.quizId })} className="text-[10px] text-placeholder hover:text-red-500">스크랩 해제</button>
               </div>
             </div>
           ))}
 
-          {(data?.urlScraps ?? []).length === 0 && (data?.quizScraps ?? []).length === 0 && (
-            <p className="text-sub text-center py-12">아직 스크랩이 없어요</p>
-          )}
+          {/* 하이라이트 */}
+          {showHighlight && highlightScraps.map((item) => (
+            <button
+              key={`hl-${item.id}`}
+              onClick={() => router.push(`/my-book/books/${item.purchaseId}`)}
+              className="w-full text-left bg-background border border-border rounded-xl p-3.5 hover:shadow-sm transition-shadow"
+            >
+              <div className="flex items-start gap-2">
+                <div className="w-3 h-3 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: HIGHLIGHT_COLORS[item.color] ?? '#FFE566' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-foreground line-clamp-2">{item.sentenceText}</p>
+                  <p className="text-[10px] text-placeholder mt-1">{item.bookTitle} · Ch.{item.chapterIndex + 1}</p>
+                  {item.note && <p className="text-[10px] text-placeholder italic mt-0.5">메모: {item.note}</p>}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteHighlight.mutate(item.id); }}
+                  className="text-[10px] text-placeholder hover:text-red-500 shrink-0"
+                >
+                  삭제
+                </button>
+              </div>
+            </button>
+          ))}
         </div>
       )}
 
@@ -172,12 +209,10 @@ export default function ScrapsPage() {
           <div className="w-full max-w-lg bg-background rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold">URL 스크랩 추가</h3>
-              <button onClick={() => setShowUrlInput(false)} className="p-1 rounded-lg hover:bg-surface">
-                <X size={18} />
-              </button>
+              <button onClick={() => setShowUrlInput(false)} className="p-1 rounded-lg hover:bg-surface"><X size={18} /></button>
             </div>
             <div className="flex gap-2">
-              <div className="flex-1 flex items-center gap-2 border border-border rounded-xl px-3 py-2.5 bg-surface focus-within:border-accent transition-colors">
+              <div className="flex-1 flex items-center gap-2 border border-border rounded-xl px-3 py-2.5 bg-surface focus-within:border-foreground transition-colors">
                 <Link size={16} className="text-sub shrink-0" />
                 <input
                   type="url"
@@ -192,7 +227,7 @@ export default function ScrapsPage() {
               <button
                 onClick={handleCreateScrap}
                 disabled={!urlInput.trim() || createScrap.isPending}
-                className="h-11 px-4 text-sm font-medium rounded-xl bg-accent text-white disabled:opacity-40 transition-opacity shrink-0"
+                className="h-11 px-4 text-sm font-medium rounded-xl bg-foreground text-background disabled:opacity-40 shrink-0"
               >
                 {createScrap.isPending ? <Loader2 size={16} className="animate-spin" /> : '추가'}
               </button>
@@ -201,14 +236,14 @@ export default function ScrapsPage() {
         </div>
       )}
 
-      {/* 플로팅 스크랩 추가 버튼 */}
+      {/* 플로팅 추가 버튼 */}
       {!showUrlInput && (
         <button
           onClick={() => setShowUrlInput(true)}
-          className="fixed bottom-24 right-5 md:bottom-8 md:right-8 z-50 w-14 h-14 rounded-full bg-accent text-white shadow-lg flex items-center justify-center hover:shadow-xl active:scale-95 transition-all"
+          className="fixed bottom-24 right-5 md:bottom-8 md:right-8 z-50 w-12 h-12 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:shadow-xl active:scale-95 transition-all"
           aria-label="URL 스크랩 추가"
         >
-          <Plus size={24} />
+          <Plus size={20} />
         </button>
       )}
 

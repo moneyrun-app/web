@@ -271,6 +271,8 @@ export function useHighlights(color?: string) {
   return useQuery({
     queryKey: ['highlights', color],
     queryFn: () => api.get<HighlightsResponse>(color ? `/my-book/highlights?color=${color}` : '/my-book/highlights'),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
@@ -288,6 +290,8 @@ export function useMyBookScraps(type?: 'url' | 'quiz') {
   return useQuery({
     queryKey: ['my-book-scraps', type],
     queryFn: () => api.get<MyBookScrapsResponse>(type ? `/my-book/scraps?type=${type}` : '/my-book/scraps'),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

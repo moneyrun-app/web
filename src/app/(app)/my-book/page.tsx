@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Library, BookOpen, AlertCircle, Loader2, Plus, Link, X, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
-import { useMyBookOverview, useDetailedReportStatus, useCreateScrap, useWrongNotes, useHighlights, useDeleteHighlight } from '@/hooks/useApi';
+import { Library, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
+import { useMyBookOverview, useDetailedReportStatus, useWrongNotes, useHighlights } from '@/hooks/useApi';
 import Markdown from '@/components/common/Markdown';
 import BookCover from '@/components/book/BookCover';
 
@@ -19,24 +19,9 @@ export default function MyBookPage() {
   const [activeTab, setActiveTab] = useState<Tab>('머니레터');
   const { data, isLoading } = useMyBookOverview();
   const { data: reportStatus } = useDetailedReportStatus();
-  const createScrap = useCreateScrap();
   const { data: wrongNotesData, isLoading: wrongNotesLoading } = useWrongNotes(activeTab === '오답노트');
-  const { data: highlightsData, isLoading: highlightsLoading } = useHighlights();
-  const deleteHighlightMut = useDeleteHighlight();
+  const { data: highlightsData } = useHighlights();
   const [collapsedNotes, setCollapsedNotes] = useState<Set<string>>(new Set());
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [urlInput, setUrlInput] = useState('');
-
-  const handleCreateScrap = () => {
-    const trimmed = urlInput.trim();
-    if (!trimmed) return;
-    createScrap.mutate(trimmed, {
-      onSuccess: () => {
-        setUrlInput('');
-        setShowUrlInput(false);
-      },
-    });
-  };
 
   if (isLoading) {
     return (
@@ -126,103 +111,47 @@ export default function MyBookPage() {
 
       {/* 스크랩 탭 */}
       {activeTab === '스크랩' && (
-        <div className="space-y-4">
-          {/* 책 하이라이트 */}
-          <div>
-            <h3 className="text-xs font-semibold text-sub mb-2 flex items-center gap-1">
-              <Bookmark size={12} /> 책 스크랩
-            </h3>
-            {highlightsLoading ? (
-              <div className="space-y-2 animate-pulse">
-                {[1, 2].map((i) => <div key={i} className="h-16 bg-surface rounded-xl" />)}
-              </div>
-            ) : (highlightsData ?? []).length === 0 ? (
-              <div className="text-center py-6 bg-surface rounded-xl">
-                <p className="text-xs text-sub">책에서 스크랩한 문장이 없어요</p>
-                <p className="text-[10px] text-placeholder mt-0.5">책을 읽으면서 문장을 클릭해 스크랩해보세요</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(highlightsData ?? []).map((hl) => (
-                  <div key={hl.id} className="flex items-start gap-2 p-3 rounded-xl bg-background border border-border">
-                    <div className="w-3 h-3 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: HIGHLIGHT_COLORS[hl.color] ?? '#FFE566' }} />
+        <div className="space-y-3">
+          {/* 요약 */}
+          <div className="bg-surface rounded-xl p-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-medium">총 스크랩</p>
+              <p className="text-lg font-bold">{data.scraps?.totalCount ?? 0}개</p>
+            </div>
+            <div className="flex gap-3 text-[10px] text-sub">
+              <span>URL {data.scraps?.urlScrapCount ?? 0}</span>
+              <span>퀴즈 {data.scraps?.quizScrapCount ?? 0}</span>
+              <span>하이라이트 {(highlightsData ?? []).length}</span>
+            </div>
+          </div>
+
+          {/* 최근 하이라이트 미리보기 */}
+          {(highlightsData ?? []).length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-sub mb-2 flex items-center gap-1">
+                <Bookmark size={12} /> 최근 하이라이트
+              </h3>
+              <div className="space-y-1.5">
+                {(highlightsData ?? []).slice(0, 3).map((hl) => (
+                  <div key={hl.id} className="flex items-start gap-2 p-2.5 rounded-lg bg-background border border-border">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: HIGHLIGHT_COLORS[hl.color] ?? '#FFE566' }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-foreground line-clamp-2">{hl.sentenceText}</p>
-                      <p className="text-[10px] text-placeholder mt-1">{hl.bookTitle}{hl.chapterTitle ? ` · ${hl.chapterTitle}` : ` · Ch.${hl.chapterIndex + 1}`}</p>
+                      <p className="text-xs text-foreground line-clamp-1">{hl.sentenceText}</p>
+                      <p className="text-[10px] text-placeholder">{hl.bookTitle}</p>
                     </div>
-                    <button
-                      onClick={() => deleteHighlightMut.mutate(hl.id)}
-                      className="text-[10px] text-placeholder hover:text-red-500 shrink-0"
-                    >
-                      삭제
-                    </button>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* URL 스크랩 */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-sub flex items-center gap-1">
-                <Link size={12} /> URL 스크랩
-              </h3>
-              <button
-                onClick={() => setShowUrlInput(true)}
-                className="text-[10px] text-accent flex items-center gap-0.5 hover:underline"
-              >
-                <Plus size={10} /> 추가
-              </button>
-            </div>
-            {(data.scraps?.totalCount ?? 0) === 0 ? (
-              <div className="text-center py-6 bg-surface rounded-xl">
-                <p className="text-xs text-sub">스크랩한 URL이 없어요</p>
-              </div>
-            ) : (
-              <button
-                onClick={() => router.push('/my-book/scraps')}
-                className="w-full text-left bg-background border border-border rounded-xl p-3 hover:shadow-sm transition-shadow"
-              >
-                <p className="text-sm font-medium text-foreground">URL 스크랩 {data.scraps?.totalCount ?? 0}개 보기</p>
-              </button>
-            )}
-          </div>
-
-          {/* URL 입력 모달 */}
-          {showUrlInput && (
-            <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-5" onClick={() => setShowUrlInput(false)}>
-              <div className="w-full max-w-lg bg-background rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold">URL 스크랩 추가</h3>
-                  <button onClick={() => setShowUrlInput(false)} className="p-1 rounded-lg hover:bg-surface">
-                    <X size={18} />
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1 flex items-center gap-2 border border-border rounded-xl px-3 py-2.5 bg-surface focus-within:border-accent transition-colors">
-                    <Link size={16} className="text-sub shrink-0" />
-                    <input
-                      type="url"
-                      value={urlInput}
-                      onChange={(e) => setUrlInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreateScrap()}
-                      placeholder="https://..."
-                      autoFocus
-                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-placeholder"
-                    />
-                  </div>
-                  <button
-                    onClick={handleCreateScrap}
-                    disabled={!urlInput.trim() || createScrap.isPending}
-                    className="h-11 px-4 text-sm font-medium rounded-xl bg-accent text-white disabled:opacity-40 transition-opacity shrink-0"
-                  >
-                    {createScrap.isPending ? <Loader2 size={16} className="animate-spin" /> : '추가'}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
+
+          {/* 전체보기 버튼 */}
+          <button
+            onClick={() => router.push('/my-book/scraps')}
+            className="w-full h-11 bg-foreground text-background text-sm font-medium rounded-xl flex items-center justify-center gap-1"
+          >
+            <Bookmark size={14} /> 스크랩 전체보기
+          </button>
         </div>
       )}
 

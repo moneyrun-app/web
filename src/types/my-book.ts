@@ -119,7 +119,21 @@ export interface QuizScrap {
   createdAt: string;
 }
 
+export interface HighlightScrap {
+  id: string;
+  type: 'highlight';
+  purchaseId: string;
+  bookTitle: string;
+  chapterIndex: number;
+  sentenceText: string;
+  color: string;
+  note: string | null;
+  createdAt: string;
+}
+
 export interface MyBookScrapsResponse {
   urlScraps: UrlScrap[];
   quizScraps: QuizScrap[];
+  highlightScraps?: HighlightScrap[];
+  totalCount?: number;
 }
