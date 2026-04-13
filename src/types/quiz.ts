@@ -1,17 +1,18 @@
 // === Quiz Today ===
 
+export interface TodayQuizData {
+  id: string;
+  question: string;
+  choices: string[];
+  difficultyLevel: number;
+  source: string;
+  category: string;
+}
+
 export interface TodayQuizResponse {
-  quiz: {
-    id: string;
-    question: string;
-    choices: string[];
-    difficultyLevel: number;
-  } | null;
-  attendance: {
-    checkedToday: boolean;
-    currentStreak: number;
-    totalDays: number;
-  };
+  quiz: TodayQuizData | null;
+  currentLevel: number;
+  solvedToday: boolean;
 }
 
 // === Quiz ===

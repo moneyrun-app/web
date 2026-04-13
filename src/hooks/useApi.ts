@@ -17,7 +17,7 @@ import type {
   ExternalScrap,
   FeedbackType,
 } from '@/types/book';
-import type { QuizScrapResponse, QuizLevelResponse, AttendanceStreak, AttendanceHistory } from '@/types/quiz';
+import type { TodayQuizResponse, QuizScrapResponse, QuizLevelResponse, AttendanceStreak, AttendanceHistory } from '@/types/quiz';
 import type { BooksResponse, BookDetail, PurchaseResponse } from '@/types/money-book';
 import type { MyBookOverview, BookReader, Highlight, AddHighlightRequest, HighlightsResponse, GenerateFromScrapsResponse, MyBookScrapsResponse } from '@/types/my-book';
 
@@ -78,6 +78,13 @@ export function useSendFeedback() {
 
 // === Quiz ===
 
+export function useTodayQuiz() {
+  return useQuery({
+    queryKey: ['today-quiz'],
+    queryFn: () => api.get<TodayQuizResponse>('/quiz/today'),
+  });
+}
+
 export function useAnswerQuiz() {
   const qc = useQueryClient();
   return useMutation({
@@ -85,6 +92,7 @@ export function useAnswerQuiz() {
       api.post<QuizAnswerResponse>(`/quiz/${quizId}/answer`, { answer }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pacemaker-today'] });
+      qc.invalidateQueries({ queryKey: ['today-quiz'] });
     },
   });
 }
@@ -129,7 +137,7 @@ export function useAttendanceHistory(month: string) {
 export function useWrongNotes(enabled = true) {
   return useQuery({
     queryKey: ['wrong-notes'],
-    queryFn: () => api.get<{ wrongNotes: WrongNote[] }>('/my-book/wrong-notes'),
+    queryFn: () => api.get<WrongNote[]>('/my-book/wrong-notes'),
     enabled,
   });
 }

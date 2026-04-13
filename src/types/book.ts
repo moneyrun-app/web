@@ -37,9 +37,11 @@ export interface PacemakerToday {
 
 export interface QuizAnswerResponse {
   correct: boolean;
-  correctAnswer: number;
+  correctAnswer: number;   // 0-indexed
+  userAnswer: number;       // 0-indexed
   briefExplanation: string;
   detailedExplanation: string;
+  wrongNoteId?: string;     // 틀렸을 때만
   attendanceChecked: boolean;
   currentStreak: number;
   suggestLevelChange: 'up' | 'down' | null;
@@ -50,9 +52,12 @@ export interface WrongNote {
   quizId: string;
   question: string;
   choices: string[];
-  userAnswer: number;
-  correctAnswer: number;
+  userAnswer: number;        // 0-indexed
+  correctAnswer: number;     // ⚠️ 1-indexed (DB 원본)
+  briefExplanation: string;
   detailedExplanation: string;
+  source: string;
+  category: string;
   createdAt: string;
 }
 

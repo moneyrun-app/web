@@ -28,7 +28,7 @@ export default function MyBookPage() {
   const deleteScrapMut = useDeleteScrap();
   const toggleQuizScrap = useScrapQuiz();
   const createScrap = useCreateScrap();
-  const [collapsedNotes, setCollapsedNotes] = useState<Set<string>>(new Set());
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
@@ -357,14 +357,14 @@ export default function MyBookPage() {
             <div className="space-y-3 animate-pulse">
               {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-surface rounded-2xl" />)}
             </div>
-          ) : (wrongNotesData?.wrongNotes ?? []).length === 0 ? (
+          ) : (wrongNotesData ?? []).length === 0 ? (
             <div className="text-center py-8 bg-surface rounded-2xl">
               <AlertCircle size={28} className="mx-auto text-sub mb-2" />
               <p className="text-sm text-sub">틀린 문제가 없어요!</p>
             </div>
           ) : (
-            (wrongNotesData?.wrongNotes ?? []).map((note) => {
-              const expanded = !collapsedNotes.has(note.id);
+            (wrongNotesData ?? []).map((note) => {
+              const expanded = expandedNotes.has(note.id);
               return (
                 <div
                   key={note.id}
@@ -376,7 +376,7 @@ export default function MyBookPage() {
                       내 답: {note.choices?.[note.userAnswer] ?? '—'}
                     </span>
                     <span className="inline-flex items-center text-3xs px-2 py-0.5 rounded-full bg-grade-green-bg text-grade-green-text font-medium">
-                      정답: {note.choices?.[note.correctAnswer] ?? '—'}
+                      정답: {note.choices?.[note.correctAnswer - 1] ?? '—'}
                     </span>
                   </div>
 
@@ -391,7 +391,7 @@ export default function MyBookPage() {
                         </div>
                       )}
                       <button
-                        onClick={() => setCollapsedNotes((prev) => {
+                        onClick={() => setExpandedNotes((prev) => {
                           const next = new Set(prev);
                           if (next.has(note.id)) next.delete(note.id);
                           else next.add(note.id);

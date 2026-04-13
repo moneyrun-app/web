@@ -1,20 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePacemakerToday, useAnswerQuiz, useScrapQuiz, useUpdateQuizLevel } from '@/hooks/useApi';
+import { usePacemakerToday, useTodayQuiz, useAnswerQuiz, useScrapQuiz, useUpdateQuizLevel } from '@/hooks/useApi';
 import { useQueryClient } from '@tanstack/react-query';
 import GradeBadge from '@/components/common/GradeBadge';
 import Markdown from '@/components/common/Markdown';
 import { useFinanceStore } from '@/store/financeStore';
 import { useRouter } from 'next/navigation';
-import { Flame, Check, BookmarkPlus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle } from 'lucide-react';
+import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle } from 'lucide-react';
 import type { QuizAnswerResponse } from '@/types/book';
+import type { TodayQuizData } from '@/types/quiz';
+
+const QUIZ_STORAGE_KEY = 'moneyrun_today_quiz';
+
+interface SavedQuiz {
+  date: string;
+  quizId: string;
+  question: string;
+  choices: string[];
+  difficultyLevel: number;
+  result: QuizAnswerResponse;
+  scrapped: boolean;
+}
+
+function loadSavedQuiz(): SavedQuiz | null {
+  try {
+    const raw = sessionStorage.getItem(QUIZ_STORAGE_KEY);
+    if (!raw) return null;
+    const saved: SavedQuiz = JSON.parse(raw);
+    if (saved.date !== new Date().toISOString().slice(0, 10)) {
+      sessionStorage.removeItem(QUIZ_STORAGE_KEY);
+      return null;
+    }
+    return saved;
+  } catch { return null; }
+}
+
+function saveQuiz(quiz: TodayQuizData, result: QuizAnswerResponse) {
+  const data: SavedQuiz = {
+    date: new Date().toISOString().slice(0, 10),
+    quizId: quiz.id,
+    question: quiz.question,
+    choices: quiz.choices,
+    difficultyLevel: quiz.difficultyLevel,
+    result,
+    scrapped: false,
+  };
+  sessionStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(data));
+}
+
+function markScrapped() {
+  try {
+    const raw = sessionStorage.getItem(QUIZ_STORAGE_KEY);
+    if (!raw) return;
+    const saved: SavedQuiz = JSON.parse(raw);
+    saved.scrapped = true;
+    sessionStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(saved));
+  } catch { /* noop */ }
+}
 
 export default function PacemakerPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading } = usePacemakerToday();
+  const { data: quizData, isLoading: quizLoading } = useTodayQuiz();
   const currentGrade = useFinanceStore((s) => s.grade);
   const answerQuiz = useAnswerQuiz();
   const scrapQuiz = useScrapQuiz();
@@ -24,10 +74,20 @@ export default function PacemakerPage() {
   const [quizResult, setQuizResult] = useState<QuizAnswerResponse | null>(null);
   const [answeredQuizId, setAnsweredQuizId] = useState<string | null>(null);
   const [quizDismissed, setQuizDismissed] = useState(false);
+  const [savedQuiz, setSavedQuiz] = useState<SavedQuiz | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
   const [swipeDir, setSwipeDir] = useState(0);
 
-  if (isLoading) {
+  // 페이지 로드 시 sessionStorage에서 오늘 푼 퀴즈 복원
+  useEffect(() => {
+    const stored = loadSavedQuiz();
+    if (stored) {
+      setSavedQuiz(stored);
+      setQuizDismissed(true);
+    }
+  }, []);
+
+  if (isLoading || quizLoading) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-3 border-border border-t-accent rounded-full animate-spin" />
@@ -39,43 +99,68 @@ export default function PacemakerPage() {
 
   if (!data) return null;
 
-  const todayQuiz = data.todayQuiz ?? null;
+  const todayQuiz = quizData?.quiz ?? null;
+  const solvedToday = quizData?.solvedToday ?? false;
   const attendance = data.attendance ?? { checkedToday: false, currentStreak: 0, totalDays: 0 };
-  const showFullscreenQuiz = todayQuiz && !quizResult && !quizDismissed;
+  const showFullscreenQuiz = todayQuiz && !solvedToday && !quizResult && !quizDismissed;
 
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null || !todayQuiz) return;
     const quizId = todayQuiz.id;
+    const quizSnapshot = todayQuiz; // 캡처: invalidate 후 todayQuiz가 null이 될 수 있음
     answerQuiz.mutate({ quizId, answer: selectedAnswer }, {
       onSuccess: (result) => {
         setAnsweredQuizId(quizId);
         setQuizResult(result);
+        saveQuiz(quizSnapshot, result);
+        setSavedQuiz({
+          date: new Date().toISOString().slice(0, 10),
+          quizId,
+          question: quizSnapshot.question,
+          choices: quizSnapshot.choices,
+          difficultyLevel: quizSnapshot.difficultyLevel,
+          result,
+          scrapped: false,
+        });
         queryClient.invalidateQueries({ queryKey: ['pacemaker-today'] });
       },
     });
   };
 
   const handleScrap = () => {
-    const qid = todayQuiz?.id ?? answeredQuizId;
+    const qid = todayQuiz?.id ?? answeredQuizId ?? savedQuiz?.quizId;
     if (!qid) return;
-    scrapQuiz.mutate({ quizId: qid });
+    scrapQuiz.mutate({ quizId: qid }, {
+      onSuccess: () => {
+        markScrapped();
+        setSavedQuiz(prev => prev ? { ...prev, scrapped: true } : null);
+      },
+    });
   };
 
   const handleLevelChange = (direction: 'up' | 'down') => {
-    if (!todayQuiz) return;
+    const currentLevel = todayQuiz?.difficultyLevel ?? savedQuiz?.difficultyLevel ?? quizData?.currentLevel;
+    if (currentLevel == null) return;
     const newLevel = direction === 'up'
-      ? Math.min(5, todayQuiz.difficultyLevel + 1)
-      : Math.max(1, todayQuiz.difficultyLevel - 1);
+      ? Math.min(5, currentLevel + 1)
+      : Math.max(1, currentLevel - 1);
     updateLevel.mutate(newLevel, {
       onSuccess: () => {
         setQuizDismissed(true);
         queryClient.invalidateQueries({ queryKey: ['pacemaker-today'] });
+        queryClient.invalidateQueries({ queryKey: ['today-quiz'] });
+        if (quizResult && !quizResult.correct) {
+          router.push('/my-book/wrong-notes');
+        }
       },
     });
   };
 
   const dismissQuizResult = () => {
     setQuizDismissed(true);
+    if (quizResult && !quizResult.correct) {
+      router.push('/my-book/wrong-notes');
+    }
   };
 
 
@@ -168,6 +253,8 @@ export default function PacemakerPage() {
   /* ─── 전체화면 결과 ─── */
   if (quizResult && !quizDismissed) {
     const isCorrect = quizResult.correct;
+    const resultLevel = savedQuiz?.difficultyLevel ?? todayQuiz?.difficultyLevel;
+    const resultChoices = savedQuiz?.choices ?? todayQuiz?.choices;
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-md mx-auto overflow-y-auto">
@@ -192,10 +279,10 @@ export default function PacemakerPage() {
             transition={{ delay: 0.2, duration: 0.4 }}
             className="w-full"
           >
-            {todayQuiz && (
+            {resultLevel != null && (
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-bold mb-2">
                 <Zap size={14} />
-                Level {todayQuiz.difficultyLevel}
+                Level {resultLevel}
               </div>
             )}
             <h2 className="text-xl font-bold mb-1 text-foreground">
@@ -210,11 +297,11 @@ export default function PacemakerPage() {
             )}
 
             {/* 오답일 때 정답 표시 */}
-            {!isCorrect && todayQuiz && (
+            {!isCorrect && resultChoices && (
               <div className="flex items-center gap-2 mb-3 mt-2">
                 <span className="text-xs text-sub">정답:</span>
                 <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                  {String.fromCharCode(65 + quizResult.correctAnswer)}. {todayQuiz.choices[quizResult.correctAnswer]}
+                  {String.fromCharCode(65 + quizResult.correctAnswer)}. {resultChoices[quizResult.correctAnswer]}
                 </span>
               </div>
             )}
@@ -238,16 +325,20 @@ export default function PacemakerPage() {
 
             <button
               onClick={handleScrap}
-              disabled={scrapQuiz.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border border-border bg-background hover:bg-surface transition-colors mb-5"
+              disabled={scrapQuiz.isPending || scrapQuiz.isSuccess}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors mb-5 ${
+                scrapQuiz.isSuccess
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border bg-background hover:bg-surface'
+              }`}
             >
-              <BookmarkPlus size={16} />
-              스크랩
+              {scrapQuiz.isSuccess ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
+              {scrapQuiz.isPending ? '저장 중...' : scrapQuiz.isSuccess ? '스크랩 완료' : '스크랩'}
             </button>
 
             {/* 난이도 변경: Lv.1 오답이면 낮추기 불가, Lv.5 정답이면 올리기 불가 */}
-            {((isCorrect && todayQuiz && todayQuiz.difficultyLevel < 5) ||
-              (!isCorrect && todayQuiz && todayQuiz.difficultyLevel > 1)) ? (
+            {((isCorrect && resultLevel != null && resultLevel < 5) ||
+              (!isCorrect && resultLevel != null && resultLevel > 1)) ? (
               <div className="bg-accent/5 rounded-2xl p-5 border-2 border-accent/20 w-full">
                 <p className="text-base font-bold text-foreground mb-1">
                   {isCorrect ? '잘하고 있어요!' : '괜찮아요!'}
@@ -287,6 +378,14 @@ export default function PacemakerPage() {
   }
 
   /* ─── 일반 페이스메이커 화면 (퀴즈 완료 후) ─── */
+  const aiCards = data.cards ?? [];
+  const quizForCard = savedQuiz; // sessionStorage 기반 — 새로고침해도 유지
+  const hasQuizCard = !!quizForCard;
+  const totalCards = aiCards.length + (hasQuizCard ? 1 : 0);
+  const quizCardIndex = aiCards.length; // 마지막 카드
+  const isQuizCard = hasQuizCard && cardIndex === quizCardIndex;
+  const aiCardIdx = cardIndex; // AI 카드는 0부터 순서대로
+
   return (
     <div className="space-y-4">
       {/* 출석 현황 */}
@@ -297,17 +396,23 @@ export default function PacemakerPage() {
       </div>
 
       {/* AI 카드 스와이프 */}
-      {(data.cards ?? []).length > 0 ? (
+      {totalCards > 0 ? (
         <>
           {/* 카드 영역 */}
           <div className="relative overflow-hidden rounded-2xl border border-border shadow-sm bg-background">
             {/* 상단 바: 등급 + 테마 + 카드 인디케이터 */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div className="flex items-center gap-2">
-                {currentGrade && <GradeBadge grade={currentGrade} size="sm" />}
-                {data.theme && <span className="text-xs text-sub">{data.theme}</span>}
+                {isQuizCard ? (
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-accent/10 text-accent">오늘의 퀴즈</span>
+                ) : (
+                  <>
+                    {currentGrade && <GradeBadge grade={currentGrade} size="sm" />}
+                    {data.theme && <span className="text-xs text-sub">{data.theme}</span>}
+                  </>
+                )}
               </div>
-              <span className="text-xs text-placeholder">{cardIndex + 1} / {data.cards!.length}</span>
+              <span className="text-xs text-placeholder">{cardIndex + 1} / {totalCards}</span>
             </div>
 
             {/* 카드 콘텐츠 */}
@@ -324,7 +429,7 @@ export default function PacemakerPage() {
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.3}
                   onDragEnd={(_, info) => {
-                    if (info.offset.x < -60 && cardIndex < data.cards!.length - 1) {
+                    if (info.offset.x < -60 && cardIndex < totalCards - 1) {
                       setSwipeDir(1);
                       setCardIndex(cardIndex + 1);
                     } else if (info.offset.x > 60 && cardIndex > 0) {
@@ -334,13 +439,61 @@ export default function PacemakerPage() {
                   }}
                   className="cursor-grab active:cursor-grabbing"
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">{data.cards![cardIndex].emoji}</span>
-                    <h3 className="text-base font-bold text-foreground">{data.cards![cardIndex].title}</h3>
-                  </div>
-                  <div className="text-sm leading-relaxed text-foreground/80">
-                    <Markdown>{data.cards![cardIndex].content}</Markdown>
-                  </div>
+                  {isQuizCard && quizForCard ? (
+                    /* 퀴즈 리캡 카드 (마지막 카드) */
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">{quizForCard.result.correct ? '🎉' : '🤔'}</span>
+                        <h3 className="text-base font-bold text-foreground">
+                          {quizForCard.result.correct ? '정답!' : '오답 — 다음엔 맞출 수 있어요'}
+                        </h3>
+                      </div>
+                      <p className="text-sm font-medium text-foreground mb-2">{quizForCard.question}</p>
+                      <div className="rounded-xl bg-surface p-3 mb-3">
+                        <p className="text-xs font-semibold text-sub mb-1">해설</p>
+                        <div className="text-sm leading-relaxed text-foreground/80">
+                          <Markdown>{quizForCard.result.correct ? quizForCard.result.briefExplanation : quizForCard.result.detailedExplanation}</Markdown>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {quizForCard.scrapped || scrapQuiz.isSuccess ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-accent bg-accent/10 text-accent">
+                            <BookmarkCheck size={14} />
+                            스크랩 완료
+                          </span>
+                        ) : (
+                          <button
+                            onClick={handleScrap}
+                            disabled={scrapQuiz.isPending}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border bg-background hover:bg-surface transition-colors"
+                          >
+                            <BookmarkPlus size={14} />
+                            {scrapQuiz.isPending ? '저장 중...' : '스크랩'}
+                          </button>
+                        )}
+                        {!quizForCard.result.correct && (
+                          <button
+                            onClick={() => router.push('/my-book/wrong-notes')}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
+                          >
+                            <AlertCircle size={14} />
+                            오답노트
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : aiCardIdx >= 0 && aiCardIdx < aiCards.length ? (
+                    /* AI 카드 */
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">{aiCards[aiCardIdx].emoji}</span>
+                        <h3 className="text-base font-bold text-foreground">{aiCards[aiCardIdx].title}</h3>
+                      </div>
+                      <div className="text-sm leading-relaxed text-foreground/80">
+                        <Markdown>{aiCards[aiCardIdx].content}</Markdown>
+                      </div>
+                    </div>
+                  ) : null}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -357,7 +510,7 @@ export default function PacemakerPage() {
 
               {/* 도트 인디케이터 */}
               <div className="flex gap-1.5">
-                {data.cards!.map((_, i) => (
+                {Array.from({ length: totalCards }).map((_, i) => (
                   <button
                     key={i}
                     onClick={() => { setSwipeDir(i > cardIndex ? 1 : -1); setCardIndex(i); }}
@@ -369,8 +522,8 @@ export default function PacemakerPage() {
               </div>
 
               <button
-                onClick={() => { setSwipeDir(1); setCardIndex(Math.min(data.cards!.length - 1, cardIndex + 1)); }}
-                disabled={cardIndex === data.cards!.length - 1}
+                onClick={() => { setSwipeDir(1); setCardIndex(Math.min(totalCards - 1, cardIndex + 1)); }}
+                disabled={cardIndex === totalCards - 1}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-surface text-sub disabled:opacity-20 transition-opacity"
               >
                 <ChevronRight size={18} />

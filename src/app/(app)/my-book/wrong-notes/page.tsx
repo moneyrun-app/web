@@ -9,12 +9,12 @@ import Markdown from '@/components/common/Markdown';
 export default function WrongNotesPage() {
   const router = useRouter();
   const { data, isLoading } = useWrongNotes();
-  const [collapsedNotes, setCollapsedNotes] = useState<Set<string>>(new Set());
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
-  const wrongNotes = data?.wrongNotes ?? [];
+  const wrongNotes = data ?? [];
 
   const toggleNote = (id: string) => {
-    setCollapsedNotes((prev) => {
+    setExpandedNotes((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -22,7 +22,7 @@ export default function WrongNotesPage() {
     });
   };
 
-  const isExpanded = (id: string) => !collapsedNotes.has(id);
+  const isExpanded = (id: string) => expandedNotes.has(id);
 
   return (
     <div>
@@ -57,7 +57,7 @@ export default function WrongNotesPage() {
                   내 답: {note.choices?.[note.userAnswer] ?? '—'}
                 </span>
                 <span className="inline-flex items-center text-3xs px-2 py-0.5 rounded-full bg-grade-green-bg text-grade-green-text font-medium">
-                  정답: {note.choices?.[note.correctAnswer] ?? '—'}
+                  정답: {note.choices?.[note.correctAnswer - 1] ?? '—'}
                 </span>
               </div>
 
