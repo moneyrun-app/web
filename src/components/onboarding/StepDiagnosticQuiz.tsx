@@ -12,7 +12,8 @@ interface StepDiagnosticQuizProps {
 }
 
 export default function StepDiagnosticQuiz({ onComplete }: StepDiagnosticQuizProps) {
-  const { data, isLoading } = useOnboardingStep2Questions();
+  const selectedCategory = useOnboardingStore((s) => s.selectedCategory);
+  const { data, isLoading } = useOnboardingStep2Questions(!!selectedCategory);
   const submitStep2 = useSubmitOnboardingStep2();
   const setDiagnosticAnswers = useOnboardingStore((s) => s.setDiagnosticAnswers);
 

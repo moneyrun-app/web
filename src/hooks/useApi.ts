@@ -15,8 +15,8 @@ import type {
   OnboardingStep3Request, OnboardingStep3Response,
   OnboardingStep4GenerateResponse, OnboardingStep4StatusResponse,
   OnboardingStep5Response,
-  ActiveCourse, AvailableCoursesResponse, CourseDetail,
-  StartCourseResponse, CompleteCourseResponse,
+  ActiveCourse, AvailableCourse, AvailableCoursesResponse, CourseDetail,
+  StartCourseResponse, CompleteCourseResponse, CourseGenerateStatusResponse,
   ActiveMissionsResponse, CompleteMissionRequest, CompleteMissionResponse,
 } from '@/types/course';
 import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse } from '@/types/finance';
@@ -162,7 +162,7 @@ export function useDetailedReportStatus() {
     queryFn: () => api.get<{ status: 'generating' | 'completed' | 'none'; reportId: string | null }>('/book/detailed-reports/status'),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status === 'generating' ? 3000 : false;
+      return status === 'generating' ? 10000 : false;
     },
   });
 }
@@ -437,10 +437,12 @@ export function useSubmitOnboardingStep1() {
   });
 }
 
-export function useOnboardingStep2Questions() {
+export function useOnboardingStep2Questions(enabled = true) {
   return useQuery({
     queryKey: ['onboarding-step2-questions'],
     queryFn: () => api.get<OnboardingStep2QuestionsResponse>('/course/onboarding/step2/questions'),
+    enabled,
+    retry: false,
   });
 }
 
@@ -480,7 +482,7 @@ export function useOnboardingStep4Status(enabled = false) {
     enabled,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status === 'generating' ? 3000 : false;
+      return status === 'generating' ? 10000 : false;
     },
   });
 }
@@ -508,7 +510,7 @@ export function useActiveCourse() {
 export function useAvailableCourses() {
   return useQuery({
     queryKey: ['available-courses'],
-    queryFn: () => api.get<AvailableCoursesResponse>('/course/available'),
+    queryFn: () => api.get<AvailableCourse[]>('/course/available'),
   });
 }
 
@@ -529,6 +531,18 @@ export function useStartCourse() {
       qc.invalidateQueries({ queryKey: ['active-course'] });
       qc.invalidateQueries({ queryKey: ['available-courses'] });
       qc.invalidateQueries({ queryKey: ['my-book-overview'] });
+    },
+  });
+}
+
+export function useCourseGenerateStatus(purchaseId: string | null) {
+  return useQuery({
+    queryKey: ['course-generate-status', purchaseId],
+    queryFn: () => api.get<CourseGenerateStatusResponse>(`/course/generate/status/${purchaseId}`),
+    enabled: !!purchaseId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'generating' ? 10000 : false;
     },
   });
 }

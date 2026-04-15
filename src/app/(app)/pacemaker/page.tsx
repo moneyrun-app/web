@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePacemakerToday, useTodayQuiz, useAnswerQuiz, useScrapQuiz, useUpdateQuizLevel } from '@/hooks/useApi';
+import { usePacemakerToday, useTodayQuiz, useAnswerQuiz, useScrapQuiz, useUpdateQuizLevel, useMyBookOverview, useCourseGenerateStatus } from '@/hooks/useApi';
 import { useQueryClient } from '@tanstack/react-query';
 import GradeBadge from '@/components/common/GradeBadge';
 import Markdown from '@/components/common/Markdown';
 import { useFinanceStore } from '@/store/financeStore';
 import { useRouter } from 'next/navigation';
-import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle, BookOpen } from 'lucide-react';
+import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle, BookOpen, Loader2 } from 'lucide-react';
 import type { QuizAnswerResponse } from '@/types/book';
 import type { TodayQuizData } from '@/types/quiz';
 
@@ -65,6 +65,10 @@ export default function PacemakerPage() {
   const queryClient = useQueryClient();
   const { data, isLoading } = usePacemakerToday();
   const { data: quizData, isLoading: quizLoading } = useTodayQuiz();
+  const { data: overviewData } = useMyBookOverview();
+  const generatingBook = overviewData?.purchasedBooks?.find((b) => b.status === 'generating');
+  const { data: genStatus } = useCourseGenerateStatus(generatingBook?.purchaseId ?? null);
+  const isGenerating = !!generatingBook;
   const currentGrade = useFinanceStore((s) => s.grade);
   const answerQuiz = useAnswerQuiz();
   const scrapQuiz = useScrapQuiz();
@@ -87,6 +91,15 @@ export default function PacemakerPage() {
     }
   }, []);
 
+  // 마이북 생성 완료 시 → 전체 새로고침
+  useEffect(() => {
+    if (genStatus?.status === 'completed') {
+      queryClient.invalidateQueries({ queryKey: ['pacemaker-today'] });
+      queryClient.invalidateQueries({ queryKey: ['my-book-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['active-course'] });
+    }
+  }, [genStatus?.status, queryClient]);
+
   if (isLoading || quizLoading) {
     return (
       <div className="fixed inset-0 z-[60] bg-background flex flex-col items-center justify-center gap-4">
@@ -102,7 +115,8 @@ export default function PacemakerPage() {
   const todayQuiz = quizData?.quiz ?? null;
   const solvedToday = quizData?.solvedToday ?? false;
   const attendance = data.attendance ?? { checkedToday: false, currentStreak: 0, totalDays: 0 };
-  const showFullscreenQuiz = todayQuiz && !solvedToday && !quizResult && !quizDismissed;
+  const hasActiveCourse = !!data.activeCourse;
+  const showFullscreenQuiz = hasActiveCourse && todayQuiz && !solvedToday && !quizResult && !quizDismissed;
 
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null || !todayQuiz) return;
@@ -163,6 +177,100 @@ export default function PacemakerPage() {
     }
   };
 
+
+  /* ─── 코스 미선택 유저 ─── */
+  if (!hasActiveCourse) {
+    /* 마이북 생성 중이면 → 생성 진행 화면 */
+    if (isGenerating) {
+      const progress = genStatus?.progress;
+      return (
+        <div className="fixed inset-0 z-[60] bg-background flex flex-col items-center justify-center px-6 text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="mb-6"
+          >
+            <Loader2 size={40} className="text-accent" />
+          </motion.div>
+
+          <h1 className="text-xl font-bold text-foreground mb-2">
+            {generatingBook?.bookTitle || '마이북 생성 중'}
+          </h1>
+
+          <motion.p
+            key={progress?.step}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm text-sub mb-6"
+          >
+            {progress?.step || '마이북을 생성하고 있습니다...'}
+          </motion.p>
+
+          <div className="w-full max-w-xs">
+            <div className="h-1.5 bg-border rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-accent rounded-full"
+                animate={{ width: `${progress?.percent ?? 0}%` }}
+                transition={{ duration: 1 }}
+              />
+            </div>
+            {progress && (
+              <p className="text-3xs text-placeholder text-center mt-1.5">
+                {progress.chaptersDone}/{progress.totalChapters} 챕터
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* 생성 중 아님 → 코스 선택 유도 */
+    return (
+      <div className="fixed inset-0 z-[60] bg-background flex flex-col items-center justify-center px-6 text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center mb-6"
+        >
+          <BookOpen size={36} className="text-accent" />
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="text-xl font-bold text-foreground mb-2"
+        >
+          나만의 코스를 시작해보세요
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="text-sm text-sub mb-8 max-w-xs leading-relaxed"
+        >
+          관심 분야를 골라 맞춤 코스를 시작하면<br />매일 퀴즈와 미션이 제공돼요
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="w-full max-w-xs"
+        >
+          <button
+            onClick={() => router.push('/course/select')}
+            className="w-full h-14 bg-foreground text-background text-base font-bold rounded-2xl flex items-center justify-center gap-2"
+          >
+            <BookOpen size={18} />
+            코스 선택하러 가기
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   /* ─── 전체화면 퀴즈 ─── */
   if (showFullscreenQuiz) {
@@ -395,29 +503,56 @@ export default function PacemakerPage() {
         <span className="text-sub">· 누적 {attendance.totalDays}일</span>
       </div>
 
-      {/* 코스 진도 */}
+      {/* 코스 진도 / 마이북 생성 중 */}
       {data.activeCourse && (
-        <button
-          onClick={() => router.push('/course/missions')}
-          className="w-full text-left bg-background border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen size={16} className="text-accent" />
-            <span className="text-sm font-bold text-foreground">{data.activeCourse.title}</span>
+        isGenerating ? (
+          <div className="w-full bg-accent/5 border-2 border-accent/20 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 size={16} className="text-accent animate-spin" />
+              <span className="text-sm font-bold text-accent">{data.activeCourse.title}</span>
+            </div>
+            <motion.p
+              key={genStatus?.progress?.step}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-xs text-sub mb-2"
+            >
+              {genStatus?.progress?.step || '마이북을 생성하고 있습니다...'}
+            </motion.p>
+            <div className="h-1.5 bg-accent/20 rounded-full overflow-hidden mb-1">
+              <motion.div
+                className="h-full bg-accent rounded-full"
+                animate={{ width: `${genStatus?.progress?.percent ?? 0}%` }}
+                transition={{ duration: 1 }}
+              />
+            </div>
+            {genStatus?.progress && (
+              <p className="text-3xs text-placeholder">{genStatus.progress.chaptersDone}/{genStatus.progress.totalChapters} 챕터</p>
+            )}
           </div>
-          <div className="h-1.5 bg-border rounded-full overflow-hidden mb-2">
-            <div
-              className="h-full bg-accent rounded-full transition-all"
-              style={{ width: `${data.activeCourse.missionSummary.total > 0 ? (data.activeCourse.missionSummary.completed / data.activeCourse.missionSummary.total) * 100 : 0}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-sub">
-              {data.activeCourse.currentChapter}/{data.activeCourse.totalChapters}장 · 미션 {data.activeCourse.missionSummary.completed}/{data.activeCourse.missionSummary.total}개
-            </span>
-            <span className="text-xs font-medium text-accent">미션 보기 →</span>
-          </div>
-        </button>
+        ) : (
+          <button
+            onClick={() => router.push('/course/missions')}
+            className="w-full text-left bg-background border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen size={16} className="text-accent" />
+              <span className="text-sm font-bold text-foreground">{data.activeCourse.title}</span>
+            </div>
+            <div className="h-1.5 bg-border rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-accent rounded-full transition-all"
+                style={{ width: `${data.activeCourse.missionSummary.total > 0 ? (data.activeCourse.missionSummary.completed / data.activeCourse.missionSummary.total) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-sub">
+                {data.activeCourse.currentChapter}/{data.activeCourse.totalChapters}장 · 미션 {data.activeCourse.missionSummary.completed}/{data.activeCourse.missionSummary.total}개
+              </span>
+              <span className="text-xs font-medium text-accent">미션 보기 →</span>
+            </div>
+          </button>
+        )
       )}
 
       {/* AI 카드 스와이프 */}

@@ -7,9 +7,9 @@ import { useGenerateOnboardingStep4, useOnboardingStep4Status } from '@/hooks/us
 import { useUserStore } from '@/store/userStore';
 
 const LOADING_MESSAGES = [
-  { threshold: 0, text: '데이터를 분석하고 있습니다' },
-  { threshold: 10, text: '만을 위한 마이북을 쓰고 있습니다' },
-  { threshold: 30, text: '실습 미션을 준비하고 있습니다' },
+  { threshold: 0, text: '님의 데이터를 분석하고 있습니다' },
+  { threshold: 10, text: '님만을 위한 마이북을 쓰고 있습니다' },
+  { threshold: 30, text: '님의 실습 미션을 준비하고 있습니다' },
   { threshold: 60, text: '거의 다 완성됐어요!' },
 ];
 
@@ -82,12 +82,21 @@ export default function StepBookGeneration({ onComplete }: StepBookGenerationPro
     });
   };
 
-  // 현재 로딩 메시지
-  const currentMessage = LOADING_MESSAGES.reduce((msg, m) =>
-    elapsedSeconds >= m.threshold ? m : msg
-  , LOADING_MESSAGES[0]);
+  // 서버 progress가 있으면 그걸 사용, 없으면 시간 기반 fallback
+  const serverProgress = statusData?.progress;
+  const progressPercent = serverProgress
+    ? serverProgress.percent
+    : Math.min((elapsedSeconds / 60) * 100, 95);
 
-  const progressPercent = Math.min((elapsedSeconds / 60) * 100, 95);
+  const currentMessage = serverProgress
+    ? { text: '' } // 서버 메시지 사용 시 별도 처리
+    : LOADING_MESSAGES.reduce((msg, m) =>
+        elapsedSeconds >= m.threshold ? m : msg
+      , LOADING_MESSAGES[0]);
+
+  const displayMessage = serverProgress
+    ? serverProgress.step
+    : `${nickname ? `${nickname}님` : ''}${currentMessage.text}`;
 
   // 실패/타임아웃
   if (failed || timedOut) {
@@ -123,12 +132,12 @@ export default function StepBookGeneration({ onComplete }: StepBookGenerationPro
 
       <div className="text-center space-y-2">
         <motion.p
-          key={currentMessage.text}
+          key={displayMessage}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-base font-bold text-foreground"
         >
-          {nickname ? `${nickname}님` : ''}{currentMessage.text}
+          {displayMessage}
         </motion.p>
         <p className="text-xs text-sub">잠시만 기다려주세요</p>
       </div>
@@ -143,7 +152,9 @@ export default function StepBookGeneration({ onComplete }: StepBookGenerationPro
             transition={{ duration: 1 }}
           />
         </div>
-        <p className="text-3xs text-placeholder text-center mt-1.5">{elapsedSeconds}초</p>
+        <p className="text-3xs text-placeholder text-center mt-1.5">
+          {serverProgress ? `${serverProgress.chaptersDone}/${serverProgress.totalChapters} 챕터` : `${elapsedSeconds}초`}
+        </p>
       </div>
     </div>
   );

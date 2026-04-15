@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { Library, BookOpen, AlertCircle, Loader2, ChevronDown, ChevronUp, Bookmark, Link, HelpCircle, ExternalLink, Plus, X } from 'lucide-react';
-import { useMyBookOverview, useDetailedReportStatus, useWrongNotes, useHighlights, useMyBookScraps, useDeleteHighlight, useDeleteScrap, useScrapQuiz, useCreateScrap } from '@/hooks/useApi';
+import { useMyBookOverview, useDetailedReportStatus, useWrongNotes, useHighlights, useMyBookScraps, useDeleteHighlight, useDeleteScrap, useScrapQuiz, useCreateScrap, useActiveCourse, useCourseGenerateStatus } from '@/hooks/useApi';
 import { decodeHtml } from '@/lib/format';
 import { getCategoryLabel } from '@/lib/category';
 import Markdown from '@/components/common/Markdown';
@@ -18,8 +20,12 @@ type Tab = (typeof TABS)[number];
 
 export default function MyBookPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('머니레터');
   const { data, isLoading } = useMyBookOverview();
+  const { data: activeCourse } = useActiveCourse();
+  const generatingBook = data?.purchasedBooks?.find((b) => b.status === 'generating');
+  const { data: genStatus } = useCourseGenerateStatus(generatingBook?.purchaseId ?? null);
   const { data: reportStatus } = useDetailedReportStatus();
   const { data: wrongNotesData, isLoading: wrongNotesLoading } = useWrongNotes(activeTab === '오답노트');
   const { data: highlightsData } = useHighlights();
@@ -32,6 +38,14 @@ export default function MyBookPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+
+  // 마이북 생성 완료 시 새로고침
+  useEffect(() => {
+    if (genStatus?.status === 'completed') {
+      queryClient.invalidateQueries({ queryKey: ['my-book-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['active-course'] });
+    }
+  }, [genStatus?.status, queryClient]);
 
   const handleCreateScrap = () => {
     const trimmed = urlInput.trim();
@@ -68,29 +82,32 @@ export default function MyBookPage() {
         <h1 className="text-xl md:text-2xl font-bold">마이북</h1>
       </div>
 
-      {/* 코스 마이북 */}
-      {data.courseBook && data.courseBook.status === 'completed' && (
-        <button
-          onClick={() => router.push(`/my-book/books/${data.courseBook!.purchaseId}`)}
-          className="w-full text-left bg-accent/5 border-2 border-accent/20 rounded-2xl p-4 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-2 mb-1.5">
-            <BookOpen size={16} className="text-accent" />
-            <span className="text-sm font-bold text-accent">{data.courseBook.courseTitle}</span>
+      {/* 마이북 생성 중 프로그레스 */}
+      {generatingBook && (
+        <div className="bg-accent/5 border-2 border-accent/20 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Loader2 size={16} className="text-accent animate-spin" />
+            <span className="text-sm font-bold text-accent">{generatingBook.bookTitle}</span>
           </div>
-          <div className="h-1 bg-accent/20 rounded-full overflow-hidden mb-1.5">
-            <div
+          <motion.p
+            key={genStatus?.progress?.step}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs text-sub mb-2"
+          >
+            {genStatus?.progress?.step || '마이북을 생성하고 있습니다...'}
+          </motion.p>
+          <div className="h-1.5 bg-accent/20 rounded-full overflow-hidden mb-1">
+            <motion.div
               className="h-full bg-accent rounded-full"
-              style={{ width: `${data.courseBook.totalChapters > 0 ? (data.courseBook.currentChapter / data.courseBook.totalChapters) * 100 : 0}%` }}
+              animate={{ width: `${genStatus?.progress?.percent ?? 0}%` }}
+              transition={{ duration: 1 }}
             />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-sub">
-              {data.courseBook.currentChapter}/{data.courseBook.totalChapters}장
-            </span>
-            <span className="text-xs font-medium text-accent">이어서 읽기 →</span>
-          </div>
-        </button>
+          {genStatus?.progress && (
+            <p className="text-3xs text-placeholder">{genStatus.progress.chaptersDone}/{genStatus.progress.totalChapters} 챕터</p>
+          )}
+        </div>
       )}
 
       {/* 탭 네비게이션 */}
@@ -145,16 +162,23 @@ export default function MyBookPage() {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3">
-              {data.purchasedBooks.map((book) => (
-                <BookCover
-                  key={book.purchaseId}
-                  title={book.bookTitle}
-                  category={book.category}
-                  coverImageUrl={book.coverImageUrl}
-                  status={book.status}
-                  onClick={book.status === 'completed' ? () => router.push(`/my-book/books/${book.purchaseId}`) : undefined}
-                />
-              ))}
+              {data.purchasedBooks.map((book) => {
+                const isCompletedCourse = book.source === 'course' && book.status === 'completed' && book.purchaseId !== activeCourse?.purchaseId;
+                return (
+                  <div key={book.purchaseId} className="relative">
+                    <BookCover
+                      title={book.bookTitle}
+                      category={book.category}
+                      coverImageUrl={book.coverImageUrl}
+                      status={book.status}
+                      onClick={book.status === 'completed' ? () => router.push(`/my-book/books/${book.purchaseId}`) : undefined}
+                    />
+                    {isCompletedCourse && (
+                      <span className="absolute -top-1 -right-1 z-10 text-3xs font-bold px-1.5 py-0.5 rounded-full bg-accent text-white shadow">완료</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

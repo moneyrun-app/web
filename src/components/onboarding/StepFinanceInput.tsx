@@ -42,7 +42,7 @@ const EXTRA_FIELDS: Record<CourseCategory, Array<{
 };
 
 interface StepFinanceInputProps {
-  onComplete: () => void;
+  onComplete: (nickname: string) => void;
 }
 
 export default function StepFinanceInput({ onComplete }: StepFinanceInputProps) {
@@ -111,9 +111,8 @@ export default function StepFinanceInput({ onComplete }: StepFinanceInputProps) 
       courseExtraData: Object.keys(processed).length > 0 ? processed : undefined,
     }, {
       onSuccess: () => {
-        // 시뮬레이션 데이터 클리어
         sessionStorage.removeItem(SIM_STORAGE_KEY);
-        onComplete();
+        onComplete(form.nickname);
       },
     });
   };

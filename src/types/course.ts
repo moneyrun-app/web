@@ -96,9 +96,24 @@ export interface OnboardingStep4GenerateResponse {
   estimatedSeconds: number;
 }
 
+export interface GenerationProgress {
+  step: string;
+  percent: number;
+  chaptersDone: number;
+  totalChapters: number;
+  updatedAt: string;
+}
+
 export interface OnboardingStep4StatusResponse {
   status: 'generating' | 'completed' | 'failed';
   purchaseId: string | null;
+  progress?: GenerationProgress;
+}
+
+export interface CourseGenerateStatusResponse {
+  status: 'generating' | 'completed' | 'failed';
+  purchaseId: string;
+  progress?: GenerationProgress;
 }
 
 export interface OnboardingStep5Response {

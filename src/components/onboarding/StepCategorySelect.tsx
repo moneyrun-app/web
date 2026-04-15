@@ -15,7 +15,7 @@ const CATEGORIES: { id: CourseCategory; label: string; icon: typeof Landmark; ex
 ];
 
 interface StepCategorySelectProps {
-  onComplete: () => void;
+  onComplete: (category: CourseCategory) => void;
 }
 
 export default function StepCategorySelect({ onComplete }: StepCategorySelectProps) {
@@ -25,7 +25,7 @@ export default function StepCategorySelect({ onComplete }: StepCategorySelectPro
   const handleSubmit = () => {
     if (!selected) return;
     submitStep1.mutate({ category: selected }, {
-      onSuccess: () => onComplete(),
+      onSuccess: () => onComplete(selected),
     });
   };
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useOnboardingStatus } from '@/hooks/useApi';
 import { useOnboardingStore } from '@/store/onboardingStore';
+import { useUserStore } from '@/store/userStore';
 import OnboardingProgress from '@/components/onboarding/OnboardingProgress';
 import StepCategorySelect from '@/components/onboarding/StepCategorySelect';
 import StepDiagnosticQuiz from '@/components/onboarding/StepDiagnosticQuiz';
@@ -75,7 +76,10 @@ export default function OnboardingPage() {
         >
           {currentStep === 1 && (
             <StepCategorySelect
-              onComplete={() => goToStep(2)}
+              onComplete={(category) => {
+                store.setCategory(category);
+                goToStep(2);
+              }}
             />
           )}
 
@@ -90,7 +94,10 @@ export default function OnboardingPage() {
 
           {currentStep === 3 && (
             <StepFinanceInput
-              onComplete={() => goToStep(4)}
+              onComplete={(nickname) => {
+                useUserStore.getState().setUser({ nickname });
+                goToStep(4);
+              }}
             />
           )}
 

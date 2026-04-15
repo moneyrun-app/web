@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Check, Loader2 } from 'lucide-react';
-import { useAvailableCourses, useStartCourse } from '@/hooks/useApi';
+import { ChevronLeft, Check, Loader2, RefreshCw } from 'lucide-react';
+import { useAvailableCourses, useStartCourse, useCourseGenerateStatus } from '@/hooks/useApi';
 
 const CATEGORY_TABS = ['전체', '연금', '주식', '부동산', '세금/연말정산', '소비/저축'] as const;
 
@@ -23,12 +23,30 @@ export default function CourseSelectPage() {
   const startCourse = useStartCourse();
   const [activeTab, setActiveTab] = useState<string>('전체');
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [generatingPurchaseId, setGeneratingPurchaseId] = useState<string | null>(null);
+  const [generatingTitle, setGeneratingTitle] = useState('');
 
-  const handleStart = (courseId: string) => {
+  const { data: genStatus } = useCourseGenerateStatus(generatingPurchaseId);
+
+  // 생성 완료 감지
+  useEffect(() => {
+    if (!genStatus) return;
+    if (genStatus.status === 'completed') {
+      setGeneratingPurchaseId(null);
+      router.push('/pacemaker');
+    }
+    if (genStatus.status === 'failed') {
+      setGeneratingPurchaseId(null);
+      setStartingId(null);
+    }
+  }, [genStatus, router]);
+
+  const handleStart = (courseId: string, title: string) => {
     setStartingId(courseId);
     startCourse.mutate(courseId, {
-      onSuccess: () => {
-        router.push('/course/missions');
+      onSuccess: (result) => {
+        setGeneratingPurchaseId(result.purchaseId);
+        setGeneratingTitle(title);
       },
       onError: () => {
         setStartingId(null);
@@ -48,7 +66,50 @@ export default function CourseSelectPage() {
     );
   }
 
-  const courses = data?.courses ?? [];
+  // 생성 중 로딩 화면
+  if (generatingPurchaseId) {
+    const progress = genStatus?.progress;
+    const percent = progress?.percent ?? 0;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+        >
+          <Loader2 size={40} className="text-accent" />
+        </motion.div>
+
+        <div className="text-center space-y-2">
+          <h2 className="text-lg font-bold text-foreground">{generatingTitle}</h2>
+          <motion.p
+            key={progress?.step}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm text-sub"
+          >
+            {progress?.step || '마이북을 생성하고 있습니다...'}
+          </motion.p>
+        </div>
+
+        <div className="w-full max-w-xs">
+          <div className="h-1.5 bg-border rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-accent rounded-full"
+              animate={{ width: `${percent}%` }}
+              transition={{ duration: 1 }}
+            />
+          </div>
+          {progress && (
+            <p className="text-3xs text-placeholder text-center mt-1.5">
+              {progress.chaptersDone}/{progress.totalChapters} 챕터
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const courses = data ?? [];
   const categoryFilter = CATEGORY_MAP[activeTab] ?? '';
   const filtered = categoryFilter
     ? courses.filter((c) => c.category === categoryFilter)
@@ -117,7 +178,7 @@ export default function CourseSelectPage() {
 
                 {!course.isCompleted && (
                   <button
-                    onClick={() => handleStart(course.id)}
+                    onClick={() => handleStart(course.id, course.title)}
                     disabled={startingId !== null}
                     className="shrink-0 h-9 px-4 text-xs font-bold rounded-xl bg-foreground text-background disabled:opacity-40"
                   >
