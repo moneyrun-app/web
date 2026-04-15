@@ -9,12 +9,14 @@ import {
   useAttendanceStreak,
   useAttendanceHistory,
   usePacemakerToday,
+  useActiveCourse,
 } from '@/hooks/useApi';
 import GradeBadge from '@/components/common/GradeBadge';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { api } from '@/lib/api';
 import { formatWon } from '@/lib/format';
-import { Pencil, Save, X, Loader2, Flame, Award, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Save, X, Loader2, Flame, Award, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const levelCharacters: Record<number, { emoji: string; name: string }> = {
   1: { emoji: '🌱', name: '새싹' },
@@ -25,12 +27,14 @@ const levelCharacters: Record<number, { emoji: string; name: string }> = {
 };
 
 export default function MyPage() {
+  const router = useRouter();
   const userNickname = useUserStore((s) => s.nickname);
   const storeFinance = useFinanceStore();
   const { data: profile } = useFinanceProfile();
   const updateProfile = useUpdateFinanceProfile();
   const { data: streak } = useAttendanceStreak();
   const { data: pacemaker } = usePacemakerToday();
+  const { data: activeCourse } = useActiveCourse();
 
   const now = new Date();
   const [calMonth, setCalMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
@@ -191,6 +195,32 @@ export default function MyPage() {
           </div>
         )}
       </div>
+
+      {/* 현재 코스 */}
+      {activeCourse && (
+        <button
+          onClick={() => router.push('/course/missions')}
+          className="w-full text-left bg-background border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen size={16} className="text-accent" />
+            <span className="text-sm font-bold text-foreground">현재 코스</span>
+          </div>
+          <p className="text-sm font-medium text-foreground mb-2">{activeCourse.title}</p>
+          <div className="h-1.5 bg-border rounded-full overflow-hidden mb-2">
+            <div
+              className="h-full bg-accent rounded-full"
+              style={{ width: `${activeCourse.missionSummary.totalMissions > 0 ? (activeCourse.missionSummary.completedMissions / activeCourse.missionSummary.totalMissions) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-sub">
+              {activeCourse.currentChapter}/{activeCourse.totalChapters}장 · 미션 {activeCourse.missionSummary.completedMissions}/{activeCourse.missionSummary.totalMissions}개
+            </span>
+            <span className="text-xs font-medium text-accent">미션 보기 →</span>
+          </div>
+        </button>
+      )}
 
       {/* 내 정보 수정 — 편집 모드 (별도 카드) */}
       {isEditing && (

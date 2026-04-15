@@ -25,6 +25,8 @@ export interface User {
   hasCompletedOnboarding: boolean;
   role: UserRole;
   createdAt: string;
+  onboardingVersion?: number;      // 2 = v2 레거시, 3 = v3 코스
+  activeCourseId?: string | null;
 }
 
 // === Admin ===
@@ -147,6 +149,7 @@ export interface AuthResponse {
     email: string;
     isNewUser: boolean;
     hasCompletedOnboarding: boolean;
+    onboardingVersion?: number;
   };
 }
 

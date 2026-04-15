@@ -8,7 +8,7 @@
 ## 프로젝트 개요
 
 **머니런(MoneyRun)** — AI가 매일 내 돈 관리를 잔소리해주는 금융 코칭 서비스.
-비로그인 시뮬레이션 체험 → 로그인 → 자동 온보딩 → 페이스메이커 / 머니북 / 마이북 / 마이페이지 / 어드민.
+비로그인 시뮬레이션 체험 → 로그인 → v3 온보딩 5단계(관심 분야 → 진단퀴즈 → 데이터 입력 → AI 마이북 생성 → 웰컴) → 코스 기반 학습(페이스메이커 / 미션 / 머니북 / 마이북 / 마이페이지 / 어드민).
 
 ---
 
@@ -16,7 +16,7 @@
 
 | 문서 | 설명 |
 |---|---|
-| `docs/프론트엔드_전달사항_v2.0.md` | v2.0 기획 + API 명세 + 페이지별 가이드 |
+| `docs/프론트엔드_전달사항_v3.0.md` | v3.0 코스 시스템 기획 + API 명세 + 페이지별 가이드 |
 
 ---
 
@@ -25,7 +25,7 @@
 | 레이어 | 기술 |
 |---|---|
 | 프레임워크 | Next.js 16 (App Router) + TypeScript |
-| 상태 관리 | Zustand (5개 스토어) + TanStack Query (서버 캐시) |
+| 상태 관리 | Zustand (6개 스토어) + TanStack Query (서버 캐시) |
 | 스타일링 | Tailwind CSS v4 |
 | 인증 | NextAuth.js v5 (카카오 OAuth → NestJS JWT) |
 | 애니메이션 | Framer Motion |
@@ -56,18 +56,23 @@ src/
     (public)/
       layout.tsx               ← 공개 레이아웃 (헤더: 로고+테마+로그인)
       page.tsx                 ← 랜딩/시뮬레이션 8스텝 위저드 (/)
+    (onboarding)/
+      layout.tsx               ← 인증 가드 (네비 없음) — 온보딩 전용
+      onboarding/page.tsx      ← 온보딩 5단계 오케스트레이터 (/onboarding)
     (app)/
-      layout.tsx               ← 인증 가드 + SideNav/BottomNav(4탭) + 자동 온보딩
-      pacemaker/page.tsx       ← 페이스메이커 (/pacemaker) — 퀴즈1개 + 출석 + AI메시지
+      layout.tsx               ← 인증 가드 + SideNav/BottomNav(4탭) + 온보딩 리다이렉트
+      pacemaker/page.tsx       ← 페이스메이커 (/pacemaker) — 코스 진도 + 퀴즈 + AI메시지
       money-book/page.tsx      ← 머니북 서점 (/money-book)
       money-book/[id]/page.tsx ← 책 상세 + 동적 폼 구매
-      my-book/page.tsx         ← 마이북 머니레터 (/my-book)
+      my-book/page.tsx         ← 마이북 머니레터 (/my-book) — 코스 마이북 섹션 포함
       my-book/report/[id]/     ← 상세 리포트 열람
       my-book/books/[purchaseId]/ ← 구매한 책 열람 + 하이라이트
       my-book/highlights/      ← 하이라이트 모아보기
       my-book/scraps/          ← 스크랩 모아보기 (URL + 퀴즈)
       my-book/wrong-notes/     ← 오답 노트
-      my-page/page.tsx         ← 마이페이지 (/my-page) — 프로필 + 출석 + 뱃지
+      course/missions/page.tsx ← 미션 목록 (/course/missions) — 챕터별 아코디언
+      course/select/page.tsx   ← 코스 선택 (/course/select) — 완료 후 다음 코스
+      my-page/page.tsx         ← 마이페이지 (/my-page) — 프로필 + 코스 진도 + 출석 + 뱃지
       admin/
         users/page.tsx         ← 어드민 유저
         quizzes/page.tsx       ← 어드민 퀴즈
@@ -83,11 +88,15 @@ src/
                                  GradeProvider, ThemeToggle
     simulation/                ← SimulationResult, StepCurrentReport, StepFutureProjection,
                                  StepActionCTA, InvestmentChart, TrajectoryChart
+    onboarding/                ← OnboardingProgress, StepCategorySelect, StepDiagnosticQuiz,
+                                 StepFinanceInput, StepBookGeneration, StepWelcome
+    course/                    ← MissionCard, CourseProgressBar
     pacemaker/                 ← TodayMessage
     book/                      ← V6ReportDetail, ReportSections (26개 섹션)
 
   hooks/
-    useApi.ts                  ← TanStack Query 훅 (퀴즈/출석/머니북/마이북/하이라이트 등)
+    useApi.ts                  ← TanStack Query 훅 (온보딩/코스/미션/퀴즈/출석/머니북/마이북 등)
+    useAuthInit.ts             ← 공통 인증 초기화 훅 (JWT 교환 + 유저 동기화)
     useFocusTrap.ts            ← 모달 포커스 관리
 
   lib/
@@ -99,15 +108,17 @@ src/
     mock/                      ← mockPacemaker, mockBook, mockUser, mockConstants
 
   store/
-    userStore.ts               ← 유저 정보 (id, nickname, role, isLoggedIn)
+    userStore.ts               ← 유저 정보 (id, nickname, role, onboardingVersion, isLoggedIn)
     financeStore.ts            ← 재무 프로필 (나이, 소득, 투자액, 등급, 잉여자금, availableBudget)
     simulationStore.ts         ← 시뮬레이션 입력 (sessionStorage 영속화)
+    onboardingStore.ts         ← 온보딩 진행 상태 (sessionStorage 영속화)
     constantsStore.ts          ← 운영 상수
     themeStore.ts              ← 테마 (light/dark)
 
   types/
     api.ts                     ← API 응답 타입, User, Admin 타입
     finance.ts                 ← 재무 타입, 시뮬레이션 타입, 등급, AvailableBudget
+    course.ts                  ← 온보딩, 코스, 미션 타입
     book.ts                    ← 페이스메이커(PacemakerToday, TodayQuiz, Attendance), 리포트, 스크랩
     quiz.ts                    ← 퀴즈 스크랩, 난이도, 출석 스트릭/히스토리
     money-book.ts              ← 머니북 서점 (BookListItem, BookDetail, RequiredField, Purchase)
@@ -124,15 +135,16 @@ src/
 | 종류 | 도구 | 용도 |
 |---|---|---|
 | 서버 상태 | TanStack Query | API 데이터 (캐시/갱신) |
-| 클라이언트 상태 | Zustand (5개) | 유저, 재무, 시뮬레이션, 상수, 테마 |
+| 클라이언트 상태 | Zustand (6개) | 유저, 재무, 시뮬레이션, 온보딩, 상수, 테마 |
 
 ### 인증 흐름
 
 ```
 랜딩(/) → 시뮬레이션(8스텝) → "카카오로 시작하기"
 → NextAuth → 카카오 토큰 → POST /auth/kakao → JWT (sessionStorage)
-→ 신규: POST /auth/onboarding (monthlyInvestment 포함) → /pacemaker
-→ 기존: GET /finance/profile + GET /users/me → /pacemaker
+→ 신규(v3): /onboarding (5단계: 관심분야 → 진단퀴즈 → 데이터입력 → AI생성 → 웰컴) → /pacemaker
+→ 기존(v2 완료): GET /finance/profile + GET /users/me → /pacemaker
+→ 기존(v2 미완료): v3 온보딩으로 리다이렉트
 ```
 
 ### 등급 판정 (lib/grade.ts)
@@ -152,16 +164,18 @@ GREEN  : < 50%
 |---|---|
 | 랜딩(시뮬레이션) | 프론트 자체 계산 (`lib/simulation.ts`) |
 | 로그인 | `POST /auth/kakao` |
-| 온보딩 (자동) | `POST /auth/onboarding` |
-| 페이스메이커 | `GET /pacemaker/today`, `POST /quiz/:id/answer`, `POST /quiz/:id/scrap`, `PATCH /quiz/level`, `POST /pacemaker/feedback` |
+| 온보딩 (v3 5단계) | `GET /course/onboarding/status`, `POST /course/onboarding/step1~5`, `GET /step2/questions`, `POST /step4/generate`, `GET /step4/status` |
+| 페이스메이커 | `GET /pacemaker/today` (activeCourse 포함), `POST /quiz/:id/answer`, `POST /quiz/:id/scrap`, `PATCH /quiz/level`, `POST /pacemaker/feedback` |
+| 코스 > 미션 | `GET /course/active/missions`, `POST /course/missions/:id/complete` |
+| 코스 > 선택 | `GET /course/available`, `POST /course/:id/start`, `POST /course/active/complete` |
 | 머니북(서점) | `GET /money-book`, `GET /money-book/:id`, `POST /money-book/:id/purchase` |
-| 마이북 > 메인 | `GET /my-book/overview` |
+| 마이북 > 메인 | `GET /my-book/overview` (courseBook 포함) |
 | 마이북 > 리포트 | `GET /book/detailed-reports`, `GET /book/detailed-reports/:id` |
 | 마이북 > 책 열람 | `GET /my-book/books/:purchaseId`, `POST /my-book/books/:purchaseId/highlights`, `DELETE /my-book/highlights/:id` |
 | 마이북 > 하이라이트 | `GET /my-book/highlights` |
 | 마이북 > 스크랩 | `GET /my-book/scraps`, `POST /my-book/generate-from-scraps`, `GET /book/scraps`, `POST /book/scraps`, `DELETE /book/scraps/:id` |
 | 마이북 > 오답노트 | `GET /my-book/wrong-notes` |
-| 마이페이지 | `GET /finance/profile`, `PATCH /finance/profile`, `GET /users/me`, `GET /attendance/streak`, `GET /attendance/history` |
+| 마이페이지 | `GET /finance/profile`, `PATCH /finance/profile`, `GET /users/me`, `GET /course/active`, `GET /attendance/streak`, `GET /attendance/history` |
 | 어드민 | `GET /admin/users`, `GET /admin/quizzes`, `PATCH /admin/constants/:key` |
 | 공통 | `GET /constants` |
 
@@ -192,4 +206,4 @@ GREEN  : < 50%
 
 ---
 
-*머니런 프론트엔드 CLAUDE.md v4.0 — 2026.04.11*
+*머니런 프론트엔드 CLAUDE.md v5.0 — 2026.04.15*

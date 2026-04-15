@@ -1,8 +1,11 @@
 import type { ScrapChannel } from './book';
+import type { CourseBook } from './course';
 
 // === MyBook Overview ===
 
 export interface MyBookOverview {
+  courseBook?: CourseBook | null;
+
   detailedReport: {
     id: string;
     summary: string;
@@ -27,7 +30,7 @@ export interface PurchasedBook {
   bookTitle: string;
   category: string;
   coverImageUrl: string | null;
-  source: 'store' | 'scrap';
+  source: 'store' | 'scrap' | 'course';
   status: 'generating' | 'completed' | 'failed';
   highlightCount: number;
   createdAt: string;

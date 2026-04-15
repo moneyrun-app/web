@@ -11,6 +11,8 @@ interface UserState {
   role: UserRole;
   createdAt: string;
   isLoggedIn: boolean;
+  onboardingVersion: number;       // 2 = v2 레거시, 3 = v3 코스
+  activeCourseId: string | null;
   setUser: (user: Partial<UserState>) => void;
   logout: () => void;
 }
@@ -23,6 +25,8 @@ export const useUserStore = create<UserState>((set) => ({
   role: 'user',
   createdAt: '',
   isLoggedIn: false,
+  onboardingVersion: 2,
+  activeCourseId: null,
   setUser: (user) => set((state) => ({ ...state, ...user })),
   logout: () => {
     if (typeof window !== 'undefined') {
@@ -36,6 +40,8 @@ export const useUserStore = create<UserState>((set) => ({
       role: 'user',
       createdAt: '',
       isLoggedIn: false,
+      onboardingVersion: 2,
+      activeCourseId: null,
     });
   },
 }));

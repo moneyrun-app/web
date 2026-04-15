@@ -8,7 +8,7 @@ import GradeBadge from '@/components/common/GradeBadge';
 import Markdown from '@/components/common/Markdown';
 import { useFinanceStore } from '@/store/financeStore';
 import { useRouter } from 'next/navigation';
-import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle } from 'lucide-react';
+import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle, BookOpen } from 'lucide-react';
 import type { QuizAnswerResponse } from '@/types/book';
 import type { TodayQuizData } from '@/types/quiz';
 
@@ -89,7 +89,7 @@ export default function PacemakerPage() {
 
   if (isLoading || quizLoading) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center gap-4">
+      <div className="fixed inset-0 z-[60] bg-background flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-3 border-border border-t-accent rounded-full animate-spin" />
         <p className="text-sm font-medium text-foreground">퀴즈를 생성하고 있어요...</p>
         <p className="text-xs text-sub">잠시만 기다려주세요</p>
@@ -167,7 +167,7 @@ export default function PacemakerPage() {
   /* ─── 전체화면 퀴즈 ─── */
   if (showFullscreenQuiz) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="fixed inset-0 z-[60] bg-background flex flex-col">
         {/* 상단 */}
         <div className="flex items-center justify-between px-5 pt-[env(safe-area-inset-top)] h-14 shrink-0">
           <div className="flex items-center gap-2">
@@ -256,7 +256,7 @@ export default function PacemakerPage() {
     const resultLevel = savedQuiz?.difficultyLevel ?? todayQuiz?.difficultyLevel;
     const resultChoices = savedQuiz?.choices ?? todayQuiz?.choices;
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div className="fixed inset-0 z-[60] flex flex-col bg-background">
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-md mx-auto overflow-y-auto">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
@@ -394,6 +394,31 @@ export default function PacemakerPage() {
         <span className="font-semibold">{attendance.currentStreak}일 연속</span>
         <span className="text-sub">· 누적 {attendance.totalDays}일</span>
       </div>
+
+      {/* 코스 진도 */}
+      {data.activeCourse && (
+        <button
+          onClick={() => router.push('/course/missions')}
+          className="w-full text-left bg-background border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen size={16} className="text-accent" />
+            <span className="text-sm font-bold text-foreground">{data.activeCourse.title}</span>
+          </div>
+          <div className="h-1.5 bg-border rounded-full overflow-hidden mb-2">
+            <div
+              className="h-full bg-accent rounded-full transition-all"
+              style={{ width: `${data.activeCourse.missionSummary.total > 0 ? (data.activeCourse.missionSummary.completed / data.activeCourse.missionSummary.total) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-sub">
+              {data.activeCourse.currentChapter}/{data.activeCourse.totalChapters}장 · 미션 {data.activeCourse.missionSummary.completed}/{data.activeCourse.missionSummary.total}개
+            </span>
+            <span className="text-xs font-medium text-accent">미션 보기 →</span>
+          </div>
+        </button>
+      )}
 
       {/* AI 카드 스와이프 */}
       {totalCards > 0 ? (

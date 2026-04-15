@@ -68,6 +68,31 @@ export default function MyBookPage() {
         <h1 className="text-xl md:text-2xl font-bold">마이북</h1>
       </div>
 
+      {/* 코스 마이북 */}
+      {data.courseBook && data.courseBook.status === 'completed' && (
+        <button
+          onClick={() => router.push(`/my-book/books/${data.courseBook!.purchaseId}`)}
+          className="w-full text-left bg-accent/5 border-2 border-accent/20 rounded-2xl p-4 hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <BookOpen size={16} className="text-accent" />
+            <span className="text-sm font-bold text-accent">{data.courseBook.courseTitle}</span>
+          </div>
+          <div className="h-1 bg-accent/20 rounded-full overflow-hidden mb-1.5">
+            <div
+              className="h-full bg-accent rounded-full"
+              style={{ width: `${data.courseBook.totalChapters > 0 ? (data.courseBook.currentChapter / data.courseBook.totalChapters) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-sub">
+              {data.courseBook.currentChapter}/{data.courseBook.totalChapters}장
+            </span>
+            <span className="text-xs font-medium text-accent">이어서 읽기 →</span>
+          </div>
+        </button>
+      )}
+
       {/* 탭 네비게이션 */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {TABS.map((tab) => (

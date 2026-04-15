@@ -7,6 +7,18 @@ import type {
   AdminBooksResponse, AdminBookDetailResponse,
   CreateBookRequest, UpdateBookRequest, UpdateChaptersRequest, AdminBook, AdminBookChapter,
 } from '@/types/api';
+import type {
+  OnboardingStatus,
+  OnboardingStep1Request, OnboardingStep1Response,
+  OnboardingStep2QuestionsResponse,
+  OnboardingStep2Request, OnboardingStep2Response,
+  OnboardingStep3Request, OnboardingStep3Response,
+  OnboardingStep4GenerateResponse, OnboardingStep4StatusResponse,
+  OnboardingStep5Response,
+  ActiveCourse, AvailableCoursesResponse, CourseDetail,
+  StartCourseResponse, CompleteCourseResponse,
+  ActiveMissionsResponse, CompleteMissionRequest, CompleteMissionResponse,
+} from '@/types/course';
 import type { SimulationInput, SimulationResult, FinanceProfile, FinanceProfileUpdateResponse } from '@/types/finance';
 import type {
   PacemakerToday,
@@ -401,6 +413,157 @@ export function useUpdateAdminChapters() {
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['admin-book', variables.bookId] });
       qc.invalidateQueries({ queryKey: ['admin-books'] });
+    },
+  });
+}
+
+// === Course Onboarding (v3) ===
+
+export function useOnboardingStatus() {
+  return useQuery({
+    queryKey: ['onboarding-status'],
+    queryFn: () => api.get<OnboardingStatus>('/course/onboarding/status'),
+  });
+}
+
+export function useSubmitOnboardingStep1() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardingStep1Request) =>
+      api.post<OnboardingStep1Response>('/course/onboarding/step1', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['onboarding-status'] });
+    },
+  });
+}
+
+export function useOnboardingStep2Questions() {
+  return useQuery({
+    queryKey: ['onboarding-step2-questions'],
+    queryFn: () => api.get<OnboardingStep2QuestionsResponse>('/course/onboarding/step2/questions'),
+  });
+}
+
+export function useSubmitOnboardingStep2() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardingStep2Request) =>
+      api.post<OnboardingStep2Response>('/course/onboarding/step2', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['onboarding-status'] });
+    },
+  });
+}
+
+export function useSubmitOnboardingStep3() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardingStep3Request) =>
+      api.post<OnboardingStep3Response>('/course/onboarding/step3', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['onboarding-status'] });
+    },
+  });
+}
+
+export function useGenerateOnboardingStep4() {
+  return useMutation({
+    mutationFn: () =>
+      api.post<OnboardingStep4GenerateResponse>('/course/onboarding/step4/generate'),
+  });
+}
+
+export function useOnboardingStep4Status(enabled = false) {
+  return useQuery({
+    queryKey: ['onboarding-step4-status'],
+    queryFn: () => api.get<OnboardingStep4StatusResponse>('/course/onboarding/step4/status'),
+    enabled,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'generating' ? 3000 : false;
+    },
+  });
+}
+
+export function useCompleteOnboardingStep5() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<OnboardingStep5Response>('/course/onboarding/step5/complete'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['onboarding-status'] });
+    },
+  });
+}
+
+// === Course ===
+
+export function useActiveCourse() {
+  return useQuery({
+    queryKey: ['active-course'],
+    queryFn: () => api.get<ActiveCourse | null>('/course/active'),
+  });
+}
+
+export function useAvailableCourses() {
+  return useQuery({
+    queryKey: ['available-courses'],
+    queryFn: () => api.get<AvailableCoursesResponse>('/course/available'),
+  });
+}
+
+export function useCourseDetail(id: string) {
+  return useQuery({
+    queryKey: ['course-detail', id],
+    queryFn: () => api.get<CourseDetail>(`/course/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useStartCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) =>
+      api.post<StartCourseResponse>(`/course/${courseId}/start`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['active-course'] });
+      qc.invalidateQueries({ queryKey: ['available-courses'] });
+      qc.invalidateQueries({ queryKey: ['my-book-overview'] });
+    },
+  });
+}
+
+export function useCompleteCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post<CompleteCourseResponse>('/course/active/complete'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['active-course'] });
+      qc.invalidateQueries({ queryKey: ['available-courses'] });
+      qc.invalidateQueries({ queryKey: ['my-book-overview'] });
+    },
+  });
+}
+
+// === Missions ===
+
+export function useActiveMissions() {
+  return useQuery({
+    queryKey: ['active-missions'],
+    queryFn: () => api.get<ActiveMissionsResponse>('/course/active/missions'),
+  });
+}
+
+export function useCompleteMission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ missionId, ...body }: CompleteMissionRequest & { missionId: string }) =>
+      api.post<CompleteMissionResponse>(`/course/missions/${missionId}/complete`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['active-missions'] });
+      qc.invalidateQueries({ queryKey: ['active-course'] });
+      qc.invalidateQueries({ queryKey: ['pacemaker-today'] });
     },
   });
 }

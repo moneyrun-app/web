@@ -1,4 +1,5 @@
 import type { Grade } from './finance';
+import type { PacemakerActiveCourse } from './course';
 
 // === Pacemaker ===
 
@@ -33,6 +34,7 @@ export interface PacemakerToday {
   todayQuiz: TodayQuiz | null;
   attendance: Attendance;
   createdAt: string | null;
+  activeCourse?: PacemakerActiveCourse | null;
 }
 
 export interface QuizAnswerResponse {
