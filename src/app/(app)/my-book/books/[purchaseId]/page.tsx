@@ -49,19 +49,19 @@ export default function BookReaderPage() {
     setSelectedSentence(null);
   }, [activeChapter]);
 
-  // 콘텐츠 클릭 → 문장 선택
+  // 콘텐츠 클릭 → 문장 선택 (문장 단위)
   const handleContentClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-highlight-popup]')) return;
     const target = e.target as HTMLElement;
-    const block = target.closest('p, li, blockquote, h1, h2, h3, h4, h5, h6');
-    if (!block || !contentRef.current?.contains(block)) return;
-    const text = block.textContent?.trim();
+    const sentence = target.closest('[data-sentence]');
+    if (!sentence || !contentRef.current?.contains(sentence)) return;
+    const text = sentence.textContent?.trim();
     if (!text || text.length < 2) return;
     if (selectedSentence?.text === text) {
       setSelectedSentence(null);
       return;
     }
-    const rect = block.getBoundingClientRect();
+    const rect = sentence.getBoundingClientRect();
     setSelectedSentence({ text, rect });
   }, [selectedSentence]);
 
@@ -69,33 +69,51 @@ export default function BookReaderPage() {
   const highlights = chapter?.highlights ?? [];
   const highlightMap = new Map(highlights.map((hl) => [hl.sentenceText, hl]));
 
+  // 문단을 문장 단위 span으로 분리
+  const splitIntoSentences = useCallback(() => {
+    if (!contentRef.current) return;
+    const blocks = contentRef.current.querySelectorAll('p, li');
+    blocks.forEach(block => {
+      if (block.querySelector('[data-sentence]')) return;
+      const html = (block as HTMLElement).innerHTML.trim();
+      if (!html) return;
+      // 문장 끝 구두점(. ? ! 。) 뒤 공백 기준으로 분리
+      const sentences = html.split(/(?<=[.?!。])\s+/).filter(s => s.trim());
+      if (sentences.length === 0) return;
+      (block as HTMLElement).innerHTML = sentences
+        .map(s => `<span data-sentence>${s}</span>`)
+        .join(' ');
+    });
+  }, [chapter, activeChapter]);
+
   // 렌더링 후 DOM에서 하이라이트 적용
   const applyHighlights = useCallback(() => {
     if (!contentRef.current || !chapter) return;
-    const blocks = contentRef.current.querySelectorAll('p, li, blockquote, h1, h2, h3, h4, h5, h6');
-    blocks.forEach((block) => {
-      const text = block.textContent?.trim();
+    const spans = contentRef.current.querySelectorAll('[data-sentence]');
+    spans.forEach((span) => {
+      const text = span.textContent?.trim();
       if (!text) return;
       const hl = highlightMap.get(text);
       if (hl) {
         const colorBg = HIGHLIGHT_COLORS.find((c) => c.color === hl.color)?.bg ?? '#FFE566';
-        (block as HTMLElement).style.backgroundColor = colorBg;
-        (block as HTMLElement).style.borderRadius = '4px';
-        (block as HTMLElement).style.padding = '2px 4px';
-        (block as HTMLElement).style.margin = '2px 0';
+        (span as HTMLElement).style.backgroundColor = colorBg;
+        (span as HTMLElement).style.borderRadius = '4px';
+        (span as HTMLElement).style.padding = '2px 4px';
       } else {
-        (block as HTMLElement).style.backgroundColor = '';
-        (block as HTMLElement).style.borderRadius = '';
-        (block as HTMLElement).style.padding = '';
-        (block as HTMLElement).style.margin = '';
+        (span as HTMLElement).style.backgroundColor = '';
+        (span as HTMLElement).style.borderRadius = '';
+        (span as HTMLElement).style.padding = '';
       }
     });
   }, [chapter, highlightMap]);
 
   useEffect(() => {
-    const timer = setTimeout(applyHighlights, 50);
+    const timer = setTimeout(() => {
+      splitIntoSentences();
+      applyHighlights();
+    }, 50);
     return () => clearTimeout(timer);
-  }, [applyHighlights, activeChapter]);
+  }, [splitIntoSentences, applyHighlights, activeChapter]);
 
   // --- early returns (모든 hooks 아래) ---
 
@@ -210,7 +228,7 @@ export default function BookReaderPage() {
 
           <div ref={contentRef} className="relative" onClick={handleContentClick}>
             {/* 콘텐츠 — 각 문장 클릭 가능 */}
-            <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 leading-relaxed [&_p]:cursor-pointer [&_p]:rounded-lg [&_p]:transition-colors [&_p:hover]:bg-surface/60 [&_p]:-mx-2 [&_p]:px-2 [&_p]:py-1 [&_li]:cursor-pointer [&_li]:rounded-lg [&_li]:transition-colors [&_li:hover]:bg-surface/60 [&_li]:px-1">
+            <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 leading-relaxed">
               {chapter && <Markdown>{chapter.content}</Markdown>}
             </div>
 

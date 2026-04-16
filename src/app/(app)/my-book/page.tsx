@@ -23,7 +23,7 @@ export default function MyBookPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('머니레터');
   const { data, isLoading } = useMyBookOverview();
-  const { data: activeCourse } = useActiveCourse();
+  const { data: activeCourse, isLoading: activeCourseLoading } = useActiveCourse();
   const generatingBook = data?.purchasedBooks?.find((b) => b.status === 'generating');
   const { data: genStatus } = useCourseGenerateStatus(generatingBook?.purchaseId ?? null);
   const { data: reportStatus } = useDetailedReportStatus();
@@ -163,7 +163,7 @@ export default function MyBookPage() {
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {data.purchasedBooks.map((book) => {
-                const isCompletedCourse = book.source === 'course' && book.status === 'completed' && book.purchaseId !== activeCourse?.purchaseId;
+                const isCompletedCourse = !activeCourseLoading && book.source === 'course' && book.status === 'completed' && book.purchaseId !== activeCourse?.purchaseId;
                 return (
                   <div key={book.purchaseId} className="relative">
                     <BookCover

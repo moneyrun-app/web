@@ -77,7 +77,6 @@ export default function PacemakerPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [quizResult, setQuizResult] = useState<QuizAnswerResponse | null>(null);
   const [answeredQuizId, setAnsweredQuizId] = useState<string | null>(null);
-  const [quizDismissed, setQuizDismissed] = useState(false);
   const [savedQuiz, setSavedQuiz] = useState<SavedQuiz | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
   const [swipeDir, setSwipeDir] = useState(0);
@@ -87,7 +86,6 @@ export default function PacemakerPage() {
     const stored = loadSavedQuiz();
     if (stored) {
       setSavedQuiz(stored);
-      setQuizDismissed(true);
     }
   }, []);
 
@@ -116,8 +114,6 @@ export default function PacemakerPage() {
   const solvedToday = quizData?.solvedToday ?? false;
   const attendance = data.attendance ?? { checkedToday: false, currentStreak: 0, totalDays: 0 };
   const hasActiveCourse = !!data.activeCourse;
-  const showFullscreenQuiz = hasActiveCourse && todayQuiz && !solvedToday && !quizResult && !quizDismissed;
-
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null || !todayQuiz) return;
     const quizId = todayQuiz.id;
@@ -160,22 +156,12 @@ export default function PacemakerPage() {
       : Math.max(1, currentLevel - 1);
     updateLevel.mutate(newLevel, {
       onSuccess: () => {
-        setQuizDismissed(true);
         queryClient.invalidateQueries({ queryKey: ['pacemaker-today'] });
         queryClient.invalidateQueries({ queryKey: ['today-quiz'] });
-        if (quizResult && !quizResult.correct) {
-          router.push('/my-book/wrong-notes');
-        }
       },
     });
   };
 
-  const dismissQuizResult = () => {
-    setQuizDismissed(true);
-    if (quizResult && !quizResult.correct) {
-      router.push('/my-book/wrong-notes');
-    }
-  };
 
 
   /* ─── 코스 미선택 유저 ─── */
@@ -272,227 +258,13 @@ export default function PacemakerPage() {
     );
   }
 
-  /* ─── 전체화면 퀴즈 ─── */
-  if (showFullscreenQuiz) {
-    return (
-      <div className="fixed inset-0 z-[60] bg-background flex flex-col">
-        {/* 상단 */}
-        <div className="flex items-center justify-between px-5 pt-[env(safe-area-inset-top)] h-14 shrink-0">
-          <div className="flex items-center gap-2">
-            <Zap size={18} className="text-accent" />
-            <span className="text-sm font-bold">오늘의 퀴즈</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-accent/10 text-accent">
-              Lv.{todayQuiz.difficultyLevel}
-            </span>
-            <div className="flex items-center gap-1">
-              <Flame size={14} className="text-orange-500" />
-              <span className="text-xs font-semibold">{attendance.currentStreak}일</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 문제 */}
-        <div className="flex-1 flex flex-col justify-center px-5 max-w-2xl mx-auto w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-bold mb-4">
-              <Zap size={14} />
-              Level {todayQuiz.difficultyLevel}
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-foreground leading-snug mb-6">
-              {todayQuiz.question}
-            </p>
-
-            <div className={`grid gap-3 ${
-              todayQuiz.choices.length <= 2 ? 'grid-cols-1'
-                : todayQuiz.choices.length <= 4 ? 'grid-cols-2'
-                : 'grid-cols-2 md:grid-cols-3'
-            }`}>
-              {todayQuiz.choices.map((choice, i) => {
-                const isOddLast = todayQuiz.choices.length % 2 === 1 && i === 0 && todayQuiz.choices.length > 2;
-                return (
-                  <motion.button
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.05 + i * 0.06, duration: 0.25 }}
-                    onClick={() => setSelectedAnswer(i)}
-                    className={`relative flex flex-col items-center justify-center text-center p-5 rounded-2xl min-h-[120px] transition-all border-2 ${
-                      isOddLast ? 'col-span-2 md:col-span-1' : ''
-                    } ${
-                      selectedAnswer === i
-                        ? 'border-accent bg-accent/5 text-foreground font-semibold scale-[1.03] shadow-lg'
-                        : 'border-border bg-surface text-foreground hover:border-foreground/20 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold mb-2 ${
-                      selectedAnswer === i ? 'bg-accent text-white' : 'bg-foreground/5 text-foreground'
-                    }`}>
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span className="text-sm leading-snug">{choice}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* 하단 제출 */}
-        <div className="px-5 pb-6 pb-[max(24px,env(safe-area-inset-bottom))] max-w-2xl mx-auto w-full shrink-0">
-          <motion.button
-            onClick={handleSubmitAnswer}
-            disabled={selectedAnswer === null || answerQuiz.isPending}
-            whileTap={{ scale: 0.97 }}
-            className="w-full h-14 bg-foreground text-background text-base font-bold rounded-2xl disabled:opacity-20 transition-opacity"
-          >
-            {answerQuiz.isPending ? '채점 중...' : '제출하기'}
-          </motion.button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ─── 전체화면 결과 ─── */
-  if (quizResult && !quizDismissed) {
-    const isCorrect = quizResult.correct;
-    const resultLevel = savedQuiz?.difficultyLevel ?? todayQuiz?.difficultyLevel;
-    const resultChoices = savedQuiz?.choices ?? todayQuiz?.choices;
-    return (
-      <div className="fixed inset-0 z-[60] flex flex-col bg-background">
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center max-w-md mx-auto overflow-y-auto">
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 15, stiffness: 180 }}
-          >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              isCorrect ? 'bg-green-500' : 'bg-foreground/10'
-            }`}>
-              {isCorrect
-                ? <Check size={32} className="text-white" />
-                : <span className="text-2xl">🤔</span>
-              }
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="w-full"
-          >
-            {resultLevel != null && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-bold mb-2">
-                <Zap size={14} />
-                Level {resultLevel}
-              </div>
-            )}
-            <h2 className="text-xl font-bold mb-1 text-foreground">
-              {isCorrect ? '정답!' : '다음엔 맞출 수 있어요'}
-            </h2>
-
-            {quizResult.attendanceChecked && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface text-xs font-medium mb-4">
-                <Flame size={14} className="text-orange-500" />
-                출석 완료 &middot; {quizResult.currentStreak}일 연속
-              </div>
-            )}
-
-            {/* 오답일 때 정답 표시 */}
-            {!isCorrect && resultChoices && (
-              <div className="flex items-center gap-2 mb-3 mt-2">
-                <span className="text-xs text-sub">정답:</span>
-                <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                  {String.fromCharCode(65 + quizResult.correctAnswer)}. {resultChoices[quizResult.correctAnswer]}
-                </span>
-              </div>
-            )}
-
-            <div className="rounded-2xl p-4 text-left mb-4 bg-surface">
-              <p className="text-xs font-semibold text-sub mb-2">{isCorrect ? '해설' : '정답 해설'}</p>
-              <div className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none prose-strong:text-foreground prose-p:text-foreground/80">
-                <Markdown>{isCorrect ? quizResult.briefExplanation : quizResult.detailedExplanation}</Markdown>
-              </div>
-            </div>
-
-            {!isCorrect && (
-              <button
-                onClick={() => { setQuizDismissed(true); router.push('/my-book/wrong-notes'); }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors mb-3"
-              >
-                <AlertCircle size={14} />
-                오답노트 보러가기
-              </button>
-            )}
-
-            <button
-              onClick={handleScrap}
-              disabled={scrapQuiz.isPending || scrapQuiz.isSuccess}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors mb-5 ${
-                scrapQuiz.isSuccess
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border bg-background hover:bg-surface'
-              }`}
-            >
-              {scrapQuiz.isSuccess ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
-              {scrapQuiz.isPending ? '저장 중...' : scrapQuiz.isSuccess ? '스크랩 완료' : '스크랩'}
-            </button>
-
-            {/* 난이도 변경: Lv.1 오답이면 낮추기 불가, Lv.5 정답이면 올리기 불가 */}
-            {((isCorrect && resultLevel != null && resultLevel < 5) ||
-              (!isCorrect && resultLevel != null && resultLevel > 1)) ? (
-              <div className="bg-accent/5 rounded-2xl p-5 border-2 border-accent/20 w-full">
-                <p className="text-base font-bold text-foreground mb-1">
-                  {isCorrect ? '잘하고 있어요!' : '괜찮아요!'}
-                </p>
-                <p className="text-sm text-sub mb-4">
-                  {isCorrect ? '난이도를 올려볼까요?' : '난이도를 낮춰서 자신감부터 쌓아볼까요?'}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleLevelChange(isCorrect ? 'up' : 'down')}
-                    disabled={updateLevel.isPending}
-                    className="flex-1 h-12 flex items-center justify-center gap-1 text-sm font-bold rounded-xl bg-accent text-white"
-                  >
-                    {isCorrect ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    {isCorrect ? '올리기' : '낮추기'}
-                  </button>
-                  <button
-                    onClick={dismissQuizResult}
-                    className="flex-1 h-12 text-sm font-bold rounded-xl border-2 border-border bg-background hover:bg-surface"
-                  >
-                    지금은 유지
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={dismissQuizResult}
-                className="w-full h-12 text-sm font-bold rounded-xl bg-foreground text-background"
-              >
-                확인
-              </button>
-            )}
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ─── 일반 페이스메이커 화면 (퀴즈 완료 후) ─── */
+  /* ─── 일반 페이스메이커 화면 ─── */
   const aiCards = data.cards ?? [];
-  const quizForCard = savedQuiz; // sessionStorage 기반 — 새로고침해도 유지
-  const hasQuizCard = !!quizForCard;
+  const hasQuizCard = !!todayQuiz || !!savedQuiz || solvedToday;
   const totalCards = aiCards.length + (hasQuizCard ? 1 : 0);
-  const quizCardIndex = aiCards.length; // 마지막 카드
+  const quizCardIndex = aiCards.length; // AI 카드 뒤 (6번째)
   const isQuizCard = hasQuizCard && cardIndex === quizCardIndex;
-  const aiCardIdx = cardIndex; // AI 카드는 0부터 순서대로
+  const aiCardIdx = cardIndex;
 
   return (
     <div className="space-y-4">
@@ -564,7 +336,10 @@ export default function PacemakerPage() {
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div className="flex items-center gap-2">
                 {isQuizCard ? (
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-accent/10 text-accent">오늘의 퀴즈</span>
+                  <>
+                    <Zap size={16} className="text-accent" />
+                    <span className="text-xs font-bold">오늘의 퀴즈</span>
+                  </>
                 ) : (
                   <>
                     {currentGrade && <GradeBadge grade={currentGrade} size="sm" />}
@@ -572,7 +347,14 @@ export default function PacemakerPage() {
                   </>
                 )}
               </div>
-              <span className="text-xs text-placeholder">{cardIndex + 1} / {totalCards}</span>
+              <div className="flex items-center gap-2">
+                {isQuizCard && (todayQuiz?.difficultyLevel || savedQuiz?.difficultyLevel) && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                    Lv.{todayQuiz?.difficultyLevel || savedQuiz?.difficultyLevel}
+                  </span>
+                )}
+                <span className="text-xs text-placeholder">{cardIndex + 1} / {totalCards}</span>
+              </div>
             </div>
 
             {/* 카드 콘텐츠 */}
@@ -599,48 +381,148 @@ export default function PacemakerPage() {
                   }}
                   className="cursor-grab active:cursor-grabbing"
                 >
-                  {isQuizCard && quizForCard ? (
-                    /* 퀴즈 리캡 카드 (마지막 카드) */
+                  {isQuizCard ? (
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-2xl">{quizForCard.result.correct ? '🎉' : '🤔'}</span>
-                        <h3 className="text-base font-bold text-foreground">
-                          {quizForCard.result.correct ? '정답!' : '오답 — 다음엔 맞출 수 있어요'}
-                        </h3>
-                      </div>
-                      <p className="text-sm font-medium text-foreground mb-2">{quizForCard.question}</p>
-                      <div className="rounded-xl bg-surface p-3 mb-3">
-                        <p className="text-xs font-semibold text-sub mb-1">해설</p>
-                        <div className="text-sm leading-relaxed text-foreground/80">
-                          <Markdown>{quizForCard.result.correct ? quizForCard.result.briefExplanation : quizForCard.result.detailedExplanation}</Markdown>
+                      {/* 미풀이: 인터랙티브 퀴즈 */}
+                      {todayQuiz && !solvedToday && !quizResult && !savedQuiz ? (
+                        <div>
+                          <p className="text-sm font-medium text-foreground mb-3">{todayQuiz.question}</p>
+                          <div className="space-y-2 mb-3">
+                            {todayQuiz.choices.map((choice, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setSelectedAnswer(i)}
+                                className={`w-full text-left px-3 py-2.5 rounded-xl border-2 text-sm transition-all ${
+                                  selectedAnswer === i
+                                    ? 'border-accent bg-accent/5 font-semibold'
+                                    : 'border-border bg-surface hover:border-foreground/20'
+                                }`}
+                              >
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold mr-2 ${
+                                  selectedAnswer === i ? 'bg-accent text-white' : 'bg-foreground/10 text-foreground'
+                                }`}>
+                                  {String.fromCharCode(65 + i)}
+                                </span>
+                                {choice}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={handleSubmitAnswer}
+                            disabled={selectedAnswer === null || answerQuiz.isPending}
+                            className="w-full h-11 bg-foreground text-background text-sm font-bold rounded-xl disabled:opacity-20 transition-opacity"
+                          >
+                            {answerQuiz.isPending ? '채점 중...' : '제출하기'}
+                          </button>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {quizForCard.scrapped || scrapQuiz.isSuccess ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-accent bg-accent/10 text-accent">
-                            <BookmarkCheck size={14} />
-                            스크랩 완료
-                          </span>
-                        ) : (
-                          <button
-                            onClick={handleScrap}
-                            disabled={scrapQuiz.isPending}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border bg-background hover:bg-surface transition-colors"
-                          >
-                            <BookmarkPlus size={14} />
-                            {scrapQuiz.isPending ? '저장 중...' : '스크랩'}
-                          </button>
-                        )}
-                        {!quizForCard.result.correct && (
-                          <button
-                            onClick={() => router.push('/my-book/wrong-notes')}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
-                          >
-                            <AlertCircle size={14} />
-                            오답노트
-                          </button>
-                        )}
-                      </div>
+                      ) : (quizResult || savedQuiz) ? (
+                        /* 풀이 완료: 결과 + 해설 */
+                        (() => {
+                          const qr = quizResult || savedQuiz?.result;
+                          const qChoices = savedQuiz?.choices || todayQuiz?.choices;
+                          const qQuestion = savedQuiz?.question || todayQuiz?.question;
+                          const qLevel = savedQuiz?.difficultyLevel || todayQuiz?.difficultyLevel;
+                          if (!qr) return null;
+                          const isCorrect = qr.correct;
+                          const isScrapped = savedQuiz?.scrapped || scrapQuiz.isSuccess;
+                          return (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-2xl">{isCorrect ? '🎉' : '🤔'}</span>
+                                <h3 className="text-base font-bold text-foreground">
+                                  {isCorrect ? '정답!' : '오답 — 다음엔 맞출 수 있어요'}
+                                </h3>
+                              </div>
+                              <p className="text-sm font-medium text-foreground mb-2">{qQuestion}</p>
+                              {!isCorrect && qChoices && (
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs text-sub">정답:</span>
+                                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                    {String.fromCharCode(65 + qr.correctAnswer)}. {qChoices[qr.correctAnswer]}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="rounded-xl bg-surface p-3 mb-3">
+                                <p className="text-xs font-semibold text-sub mb-1">{isCorrect ? '해설' : '정답 해설'}</p>
+                                <div className="text-sm leading-relaxed text-foreground/80">
+                                  <Markdown>{isCorrect ? qr.briefExplanation : qr.detailedExplanation}</Markdown>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {isScrapped ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-accent bg-accent/10 text-accent">
+                                    <BookmarkCheck size={14} />
+                                    스크랩 완료
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={handleScrap}
+                                    disabled={scrapQuiz.isPending}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border bg-background hover:bg-surface transition-colors"
+                                  >
+                                    <BookmarkPlus size={14} />
+                                    {scrapQuiz.isPending ? '저장 중...' : '스크랩'}
+                                  </button>
+                                )}
+                                {!isCorrect && (
+                                  <button
+                                    onClick={() => router.push('/my-book/wrong-notes')}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800"
+                                  >
+                                    <AlertCircle size={14} />
+                                    오답노트
+                                  </button>
+                                )}
+                              </div>
+                              {((isCorrect && qLevel != null && qLevel < 5) ||
+                                (!isCorrect && qLevel != null && qLevel > 1)) && (
+                                <div className="mt-3 bg-accent/5 rounded-xl p-3 border border-accent/20">
+                                  <p className="text-xs text-sub mb-2">
+                                    {isCorrect ? '난이도를 올려볼까요?' : '난이도를 낮춰볼까요?'}
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleLevelChange(isCorrect ? 'up' : 'down')}
+                                      disabled={updateLevel.isPending || updateLevel.isSuccess}
+                                      className="flex-1 h-9 flex items-center justify-center gap-1 text-xs font-bold rounded-lg bg-accent text-white disabled:opacity-50"
+                                    >
+                                      {updateLevel.isSuccess ? <Check size={14} /> : isCorrect ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                      {updateLevel.isSuccess ? '변경 완료' : updateLevel.isPending ? '변경 중...' : isCorrect ? '올리기' : '낮추기'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()
+                      ) : todayQuiz ? (
+                        /* 이미 풀었지만 결과 데이터 없음 — 문제 내용은 표시 */
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Check size={20} className="text-green-500" />
+                            <span className="text-sm font-semibold text-green-600 dark:text-green-400">풀이 완료</span>
+                          </div>
+                          <p className="text-sm font-medium text-foreground mb-3">{todayQuiz.question}</p>
+                          <div className="space-y-2">
+                            {todayQuiz.choices.map((choice, i) => (
+                              <div
+                                key={i}
+                                className="w-full text-left px-3 py-2.5 rounded-xl border border-border bg-surface text-sm text-foreground/70"
+                              >
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold mr-2 bg-foreground/10 text-foreground">
+                                  {String.fromCharCode(65 + i)}
+                                </span>
+                                {choice}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-4 text-center">
+                          <Check size={28} className="text-green-500 mb-2" />
+                          <p className="text-sm font-medium text-foreground">오늘의 퀴즈 완료!</p>
+                        </div>
+                      )}
                     </div>
                   ) : aiCardIdx >= 0 && aiCardIdx < aiCards.length ? (
                     /* AI 카드 */

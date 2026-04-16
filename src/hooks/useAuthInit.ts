@@ -37,9 +37,14 @@ export function useAuthInit(): AuthInitResult {
         const savedJwt = sessionStorage.getItem(JWT_STORAGE_KEY);
         if (savedJwt) {
           api.setToken(savedJwt);
-          await syncUser(savedJwt);
-          setIsInitialized(true);
-          return;
+          const ok = await syncUser(savedJwt);
+          if (ok) {
+            setIsInitialized(true);
+            return;
+          }
+          // JWT 만료/무효 → 제거 후 카카오 토큰으로 재교환
+          sessionStorage.removeItem(JWT_STORAGE_KEY);
+          api.setToken('');
         }
 
         // 2. 카카오 토큰 → 백엔드 JWT 교환
@@ -120,8 +125,8 @@ export function useAuthInit(): AuthInitResult {
   };
 }
 
-/** 저장된 JWT로 유저 정보 + 재무 프로필 복원 */
-async function syncUser(jwt: string) {
+/** 저장된 JWT로 유저 정보 + 재무 프로필 복원. 실패 시 false 반환. */
+async function syncUser(jwt: string): Promise<boolean> {
   api.setToken(jwt);
 
   const [user, profile] = await Promise.allSettled([
@@ -140,19 +145,22 @@ async function syncUser(jwt: string) {
     }>('/finance/profile'),
   ]);
 
-  if (user.status === 'fulfilled') {
-    useUserStore.getState().setUser({
-      ...user.value,
-      role: (user.value.role as 'user' | 'admin') ?? 'user',
-      onboardingVersion: user.value.onboardingVersion ?? 2,
-      createdAt: user.value.createdAt ?? '',
-      isLoggedIn: true,
-    });
-  }
+  // 유저 조회 실패 → JWT 무효
+  if (user.status === 'rejected') return false;
+
+  useUserStore.getState().setUser({
+    ...user.value,
+    role: (user.value.role as 'user' | 'admin') ?? 'user',
+    onboardingVersion: user.value.onboardingVersion ?? 2,
+    createdAt: user.value.createdAt ?? '',
+    isLoggedIn: true,
+  });
 
   if (profile.status === 'fulfilled') {
     useFinanceStore.getState().setProfile(profile.value);
   }
+
+  return true;
 }
 
 async function loadFinanceProfile() {

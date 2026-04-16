@@ -9,10 +9,21 @@ export interface TodayQuizData {
   category: string;
 }
 
+export interface TodayQuizSolvedResult {
+  correct: boolean;
+  correctAnswer: number;
+  userAnswer: number;
+  briefExplanation: string;
+  detailedExplanation: string;
+  scrapped: boolean;
+}
+
 export interface TodayQuizResponse {
   quiz: TodayQuizData | null;
   currentLevel: number;
   solvedToday: boolean;
+  /** solvedToday === true 일 때 DB에서 가져온 결과 */
+  result?: TodayQuizSolvedResult | null;
 }
 
 // === Quiz ===

@@ -53,16 +53,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="md:pl-60">
         <div id="main-content" className="max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-8 py-4 md:py-8 pb-20 md:pb-8">
           {isReady ? children : (
-            <div className="space-y-5" role="status" aria-label="페이지 로딩 중">
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
-                <p className="text-sm text-sub">AI가 맞춤 분석 준비 중이에요...</p>
-              </div>
-              <div className="space-y-4 animate-pulse">
-                <div className="h-28 bg-surface rounded-2xl" />
-                <div className="h-40 bg-surface rounded-2xl" />
-                <div className="h-32 bg-surface rounded-2xl" />
-              </div>
+            <div className="space-y-4 animate-pulse" role="status" aria-label="페이지 로딩 중">
+              <div className="h-8 w-32 bg-surface rounded-full" />
+              <div className="h-24 bg-surface rounded-2xl" />
+              <div className="h-64 bg-surface rounded-2xl" />
+              <div className="h-4 w-2/3 bg-surface rounded-lg" />
             </div>
           )}
         </div>

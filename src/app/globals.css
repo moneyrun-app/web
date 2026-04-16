@@ -153,6 +153,18 @@ textarea.border:focus {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--grade-main) 20%, transparent);
 }
 
+/* 책 열람 — 문장 단위 선택 */
+[data-sentence] {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  padding: 1px 3px;
+  margin: 0 -3px;
+}
+[data-sentence]:hover {
+  background-color: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
