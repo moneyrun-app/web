@@ -47,10 +47,25 @@ export default function AdminQuizzesPage() {
                 onClick={() => setExpandedId(isExpanded ? null : quiz.id)}
                 className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-surface/50 transition-colors"
               >
-                <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-status-info-bg text-status-info-text shrink-0 mt-0.5">
-                  {quiz.category}
-                </span>
-                <span className="text-sm flex-1">{quiz.question}</span>
+                <div className="flex flex-col gap-0.5 shrink-0 mt-0.5">
+                  <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-status-info-bg text-status-info-text">
+                    {quiz.category}
+                  </span>
+                  <span className="text-3xs text-placeholder font-mono text-center">{quiz.quizCode}</span>
+                </div>
+                <div className="flex-1">
+                  <span className="text-sm">{quiz.question}</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-3xs px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">
+                      {quiz.difficultyLabel}
+                    </span>
+                    {quiz.totalAttempts > 0 && (
+                      <span className="text-3xs text-sub">
+                        {quiz.totalAttempts}명 · 정답률 {Math.round(quiz.correctRate)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
                 {isExpanded ? (
                   <ChevronUp className="w-4 h-4 text-sub shrink-0 mt-0.5" />
                 ) : (
@@ -91,8 +106,17 @@ export default function AdminQuizzesPage() {
                         <ReactMarkdown>{quiz.detailedExplanation}</ReactMarkdown>
                       </div>
                     </div>
+                    {quiz.hint && (
+                      <div>
+                        <p className="text-xs text-sub mb-1">힌트</p>
+                        <div className="text-sm bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-2">
+                          {quiz.hint}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-4 text-xs text-sub mt-2">
                       <span>출처: {quiz.source}</span>
+                      <span>난이도: {quiz.difficultyLabel}</span>
                       <span>{new Date(quiz.createdAt).toLocaleDateString('ko-KR')}</span>
                     </div>
                   </div>

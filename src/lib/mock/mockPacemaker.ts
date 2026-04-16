@@ -13,9 +13,15 @@ export const mockPacemakerToday: PacemakerToday = {
   quote: '워렌 버핏 — 돈을 잃지 마라. 그게 첫 번째 규칙이다.',
   todayQuiz: {
     id: 'quiz-001',
+    quizCode: 'Q00001',
     question: '적금을 중도해지하면 어떤 이자율이 적용될까?',
     choices: ['약정 이자율', '중도해지 이자율', '기본 금리', '무이자'],
+    hint: '은행에서 약속한 이자율과 다른 별도 이자율이 있어요.',
     difficultyLevel: 2,
+    difficultyLabel: '심화',
+    totalAttempts: 142,
+    correctCount: 89,
+    correctRate: 62.7,
   },
   attendance: {
     checkedToday: false,

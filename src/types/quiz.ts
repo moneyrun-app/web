@@ -2,11 +2,17 @@
 
 export interface TodayQuizData {
   id: string;
+  quizCode: string;                // "Q00001"
   question: string;
   choices: string[];
-  difficultyLevel: number;
+  hint: string | null;
+  difficultyLevel: number;         // 1=초급, 2=심화, 3=마스터
+  difficultyLabel: string;         // "초급" | "심화" | "마스터"
   source: string;
   category: string;
+  totalAttempts: number;
+  correctCount: number;
+  correctRate: number;             // 0~100
 }
 
 export interface TodayQuizSolvedResult {
@@ -20,7 +26,8 @@ export interface TodayQuizSolvedResult {
 
 export interface TodayQuizResponse {
   quiz: TodayQuizData | null;
-  currentLevel: number;
+  currentLevel: number;            // 1~3
+  currentLevelLabel: string;       // "초급" | "심화" | "마스터"
   solvedToday: boolean;
   /** solvedToday === true 일 때 DB에서 가져온 결과 */
   result?: TodayQuizSolvedResult | null;
@@ -35,6 +42,7 @@ export interface QuizScrapResponse {
 
 export interface QuizLevelResponse {
   newLevel: number;
+  newLevelLabel: string;           // "초급" | "심화" | "마스터"
 }
 
 // === Attendance ===
@@ -58,6 +66,7 @@ export interface AttendanceRecord {
   date: string;
   isCorrect: boolean;
   quizLevel: number;
+  quizLevelLabel: string;          // "초급" | "심화" | "마스터"
 }
 
 export interface AttendanceHistory {

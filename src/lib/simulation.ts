@@ -10,7 +10,7 @@ export function calculateSimulation(input: SimulationInput): SimulationResult {
   const surplus = input.monthlyIncome - monthlyExpense;
   const investmentPeriod = Math.max(0, input.retirementAge - input.age);
   const vestingPeriod = Math.max(0, input.pensionStartAge - input.retirementAge);
-  const grade = calculateGrade(input.monthlyIncome, monthlyExpense);
+  const grade = calculateGrade(input.monthlyIncome, input.monthlyFixedCost, input.monthlyVariableCost, input.monthlyInvestment);
 
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const daily = Math.floor(Math.max(0, surplus) / daysInMonth / 1000) * 1000;

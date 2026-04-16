@@ -25,7 +25,7 @@ export interface User {
   hasCompletedOnboarding: boolean;
   role: UserRole;
   createdAt: string;
-  onboardingVersion?: number;      // 2 = v2 레거시, 3 = v3 코스
+  onboardingVersion?: number;      // 2 = v2 레거시, 3 = v3 코스, 4 = v4 리뉴얼
   activeCourseId?: string | null;
 }
 
@@ -49,13 +49,20 @@ export interface AdminUsersResponse {
 
 export interface AdminQuiz {
   id: string;
+  quizCode: string;
   question: string;
   choices: string[];
   correctAnswer: number;
   briefExplanation: string;
   detailedExplanation: string;
+  hint: string | null;
+  difficultyLevel: number;
+  difficultyLabel: string;         // "초급" | "심화" | "마스터"
   source: string;
   category: string;
+  totalAttempts: number;
+  correctCount: number;
+  correctRate: number;             // 0~100
   createdAt: string;
 }
 

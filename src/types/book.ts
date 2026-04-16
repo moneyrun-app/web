@@ -5,9 +5,15 @@ import type { PacemakerActiveCourse } from './course';
 
 export interface TodayQuiz {
   id: string;
+  quizCode: string;
   question: string;
   choices: string[];
-  difficultyLevel: number; // 1~5
+  hint: string | null;
+  difficultyLevel: number;         // 1~3
+  difficultyLabel: string;         // "초급" | "심화" | "마스터"
+  totalAttempts: number;
+  correctCount: number;
+  correctRate: number;             // 0~100
 }
 
 export interface Attendance {

@@ -6,94 +6,114 @@ export type CourseCategory = '연금' | '주식' | '부동산' | '세금_연말�
 export type CourseLevel = '기초' | '심화' | '마스터';
 export type MissionType = 'action' | 'read' | 'calculate';
 
-// === 온보딩 v3 ===
+// === 온보딩 v4 ===
+
+export type OnboardingStep = 'select-level' | 'quiz' | 'generation' | 'complete';
 
 export interface OnboardingStatus {
-  currentStep: number;
+  currentStep: OnboardingStep;
   isComplete: boolean;
-  step1: {
-    selectedCategory: CourseCategory | null;
-  };
-  step2: {
-    assignedLevel: CourseLevel | null;
-    diagnosticScore: number | null;
-  };
-  step3: {
-    financeDataSubmitted: boolean;
-  };
-  step4: {
-    generationStatus: 'pending' | 'generating' | 'completed' | 'failed' | null;
-    purchaseId: string | null;
-  };
-  step5: {
-    pacemakerWelcomed: boolean;
-  };
+  selectedCategory: CourseCategory | null;
+  levelChoice: 'beginner' | 'find-level' | null;
+  assignedLevel: CourseLevel | null;
+  generationStatus: 'generating' | 'completed' | 'failed' | null;
+  purchaseId: string | null;
 }
 
-export interface OnboardingStep1Request {
+// --- 로그인 전 온보딩 ---
+
+export interface PreOnboardingRequest {
+  nickname: string;
   category: CourseCategory;
+  age: number;
+  monthlyIncome: number;
+  monthlyInvestment: number;
+  monthlyFixedCost: number;
+  monthlyVariableCost: number;
+  retirementAge: number;
+  pensionStartAge: number;
 }
 
-export interface OnboardingStep1Response {
-  nextStep: 2;
-  selectedCategory: CourseCategory;
+export interface PreOnboardingResponse {
+  nickname: string;
+  category: string;
+  grade: Grade;
+  currentTab: {
+    grade: string;
+    gradeLabel: string;
+    monthlyIncome: number;
+    monthlyFixedCost: number;
+    monthlyVariableCost: number;
+    monthlyInvestment: number;
+    surplus: number;
+    availableBudget: {
+      monthly: number;
+      weekly: number;
+      daily: number;
+    };
+    fixedCostRatio: number;
+    expenseRatio: number;
+  };
+  futureTab: {
+    yearsToRetirement: number;
+    retirementAge: number;
+    pensionStartAge: number;
+    pensionGapYears: number;
+    estimatedSavings: Array<{
+      label: string;
+      futureAsset: number;
+      monthlyPension: number;
+    }>;
+  };
+  actionTab: {
+    gradeAction: string;
+    ctaMessage: string;
+    courseMessage: string;
+  };
+}
+
+// --- 로그인 후 코스 온보딩 ---
+
+export interface SelectLevelRequest {
+  choice: 'beginner' | 'find-level';
+}
+
+export interface SelectLevelResponse {
+  choice: 'beginner' | 'find-level';
+  assignedLevel?: CourseLevel;
+  courseTitle?: string;
+  message: string;
+  generationStarted?: true;
+  nextStep?: 'quiz';
 }
 
 export interface DiagnosticQuestion {
   id: string;
   question: string;
   choices: string[];
+  hint: string;
 }
 
-export interface OnboardingStep2QuestionsResponse {
+export interface DiagnosticQuizQuestionsResponse {
   category: string;
   questions: DiagnosticQuestion[];
 }
 
-export interface OnboardingStep2Request {
+export interface QuizSubmitRequest {
   answers: Array<{
     questionId: string;
     answer: number;
   }>;
 }
 
-export interface OnboardingStep2Response {
-  nextStep: 3;
+export interface QuizSubmitResponse {
   assignedLevel: CourseLevel;
   courseTitle: string;
-  scoreRatio: number;
   correctCount: number;
   totalCount: number;
-}
-
-export interface OnboardingStep3Request {
-  financeData: {
-    nickname: string;
-    age: number;
-    retirementAge: number;
-    pensionStartAge?: number;
-    monthlyIncome: number;
-    monthlyInvestment: number;
-    monthlyFixedCost: number;
-    monthlyVariableCost: number;
-  };
-  courseExtraData?: Record<string, unknown>;
-}
-
-export interface OnboardingStep3Response {
-  nextStep: 4;
-  grade: Grade;
-  availableBudget: {
-    monthly: number;
-    weekly: number;
-    daily: number;
-  };
-}
-
-export interface OnboardingStep4GenerateResponse {
-  status: 'generating';
-  purchaseId: string;
-  estimatedSeconds: number;
+  message: string;
+  wrongNoteMessage: string | null;
+  generationStarted: true;
 }
 
 export interface GenerationProgress {
@@ -101,13 +121,12 @@ export interface GenerationProgress {
   percent: number;
   chaptersDone: number;
   totalChapters: number;
-  updatedAt: string;
 }
 
-export interface OnboardingStep4StatusResponse {
-  status: 'generating' | 'completed' | 'failed';
+export interface GenerationStatusResponse {
+  status: 'pending' | 'generating' | 'completed' | 'failed';
   purchaseId: string | null;
-  progress?: GenerationProgress;
+  progress: GenerationProgress;
 }
 
 export interface CourseGenerateStatusResponse {
@@ -116,7 +135,7 @@ export interface CourseGenerateStatusResponse {
   progress?: GenerationProgress;
 }
 
-export interface OnboardingStep5Response {
+export interface OnboardingCompleteResponse {
   complete: true;
   welcomeMessage: string;
   courseTitle: string;
@@ -253,41 +272,3 @@ export interface CourseBook {
   status: 'generating' | 'completed' | 'failed';
 }
 
-// === 코스별 추가 데이터 타입 (프론트 전용) ===
-
-export type PensionExtraData = {
-  pensionType: string;
-  nationalPensionYears: number;
-  pensionBalance: number;
-};
-
-export type StockExtraData = {
-  investmentExperience: string;
-  currentAssets: number;
-};
-
-export type RealEstateExtraData = {
-  housingType: string;
-  targetAsset: string;
-  cheongyakScore: number;
-};
-
-export type TaxExtraData = {
-  annualIncome: number;
-  dependents: number;
-  housingType: string;
-  creditCardUsage: number;
-};
-
-export type SavingExtraData = {
-  targetSaving: number;
-  hasEmergencyFund: boolean;
-  subscriptionCount: number;
-};
-
-export type CourseExtraData =
-  | PensionExtraData
-  | StockExtraData
-  | RealEstateExtraData
-  | TaxExtraData
-  | SavingExtraData;

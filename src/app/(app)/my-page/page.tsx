@@ -19,11 +19,9 @@ import { Pencil, Save, X, Loader2, Flame, Award, ChevronLeft, ChevronRight, Book
 import { useRouter } from 'next/navigation';
 
 const levelCharacters: Record<number, { emoji: string; name: string }> = {
-  1: { emoji: '🌱', name: '새싹' },
-  2: { emoji: '🌿', name: '풀잎' },
-  3: { emoji: '🌳', name: '나무' },
-  4: { emoji: '💎', name: '다이아' },
-  5: { emoji: '🏆', name: '챔피언' },
+  1: { emoji: '🌱', name: '초급' },
+  2: { emoji: '🌿', name: '심화' },
+  3: { emoji: '🏆', name: '마스터' },
 };
 
 export default function MyPage() {
@@ -147,7 +145,7 @@ export default function MyPage() {
               <h1 className="text-xl font-bold">{fin.nickname || userNickname || '유저'}</h1>
               <GradeBadge grade={fin.grade} />
             </div>
-            <p className="text-xs text-sub">Lv.{quizLevel} {character.name}</p>
+            <p className="text-xs text-sub">{character.emoji} {character.name}</p>
           </div>
         </div>
 
@@ -159,7 +157,7 @@ export default function MyPage() {
           </div>
           <div className="bg-surface rounded-xl p-3 text-center">
             <p className="text-xs text-sub mb-0.5">레벨</p>
-            <p className="text-lg font-bold">Lv.{quizLevel}</p>
+            <p className="text-lg font-bold">{character.name}</p>
           </div>
           <div className="bg-surface rounded-xl p-3 text-center">
             <p className="text-xs text-sub mb-0.5">뱃지</p>

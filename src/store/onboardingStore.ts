@@ -1,32 +1,35 @@
 'use client';
 
 import { create } from 'zustand';
-import type { CourseCategory, CourseLevel } from '@/types/course';
+import type { CourseCategory, CourseLevel, OnboardingStep } from '@/types/course';
 
-const STORAGE_KEY = 'moneyrun_onboarding_v3';
+const STORAGE_KEY = 'moneyrun_onboarding_v4';
 
 interface OnboardingState {
-  currentStep: number;
+  currentStep: OnboardingStep;
   selectedCategory: CourseCategory | null;
+  levelChoice: 'beginner' | 'find-level' | null;
   assignedLevel: CourseLevel | null;
   courseTitle: string | null;
-  diagnosticAnswers: Array<{ questionId: string; answer: number }>;
+  quizAnswers: Array<{ questionId: string; answer: number }>;
 
-  setStep: (step: number) => void;
+  setStep: (step: OnboardingStep) => void;
   setCategory: (category: CourseCategory) => void;
+  setLevelChoice: (choice: 'beginner' | 'find-level') => void;
   setLevel: (level: CourseLevel, courseTitle: string) => void;
-  setDiagnosticAnswers: (answers: Array<{ questionId: string; answer: number }>) => void;
+  setQuizAnswers: (answers: Array<{ questionId: string; answer: number }>) => void;
   loadFromSession: () => void;
   saveToSession: () => void;
   clear: () => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
-  currentStep: 1,
+  currentStep: 'select-level',
   selectedCategory: null,
+  levelChoice: null,
   assignedLevel: null,
   courseTitle: null,
-  diagnosticAnswers: [],
+  quizAnswers: [],
 
   setStep: (step) => {
     set({ currentStep: step });
@@ -38,13 +41,18 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     get().saveToSession();
   },
 
+  setLevelChoice: (choice) => {
+    set({ levelChoice: choice });
+    get().saveToSession();
+  },
+
   setLevel: (level, courseTitle) => {
     set({ assignedLevel: level, courseTitle });
     get().saveToSession();
   },
 
-  setDiagnosticAnswers: (answers) => {
-    set({ diagnosticAnswers: answers });
+  setQuizAnswers: (answers) => {
+    set({ quizAnswers: answers });
     get().saveToSession();
   },
 
@@ -55,11 +63,12 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       try {
         const parsed = JSON.parse(raw);
         set({
-          currentStep: parsed.currentStep ?? 1,
+          currentStep: parsed.currentStep ?? 'select-level',
           selectedCategory: parsed.selectedCategory ?? null,
+          levelChoice: parsed.levelChoice ?? null,
           assignedLevel: parsed.assignedLevel ?? null,
           courseTitle: parsed.courseTitle ?? null,
-          diagnosticAnswers: parsed.diagnosticAnswers ?? [],
+          quizAnswers: parsed.quizAnswers ?? [],
         });
       } catch {
         // ignore
@@ -73,9 +82,10 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
       currentStep: state.currentStep,
       selectedCategory: state.selectedCategory,
+      levelChoice: state.levelChoice,
       assignedLevel: state.assignedLevel,
       courseTitle: state.courseTitle,
-      diagnosticAnswers: state.diagnosticAnswers,
+      quizAnswers: state.quizAnswers,
     }));
   },
 
@@ -83,11 +93,12 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     if (typeof window === 'undefined') return;
     sessionStorage.removeItem(STORAGE_KEY);
     set({
-      currentStep: 1,
+      currentStep: 'select-level',
       selectedCategory: null,
+      levelChoice: null,
       assignedLevel: null,
       courseTitle: null,
-      diagnosticAnswers: [],
+      quizAnswers: [],
     });
   },
 }));

@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface Props {
@@ -12,11 +12,13 @@ interface Props {
 
 export default function LoginSheet({ open, onClose, message }: Props) {
   const dialogRef = useFocusTrap<HTMLDivElement>();
+  const router = useRouter();
 
   if (!open) return null;
 
   const handleKakaoLogin = () => {
-    signIn('kakao', { callbackUrl: `${window.location.origin}/pacemaker` });
+    onClose();
+    router.push('/onboarding');
   };
 
   return (

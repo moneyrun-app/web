@@ -8,7 +8,7 @@ import GradeBadge from '@/components/common/GradeBadge';
 import Markdown from '@/components/common/Markdown';
 import { useFinanceStore } from '@/store/financeStore';
 import { useRouter } from 'next/navigation';
-import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle, BookOpen, Loader2 } from 'lucide-react';
+import { Flame, Check, BookmarkPlus, BookmarkCheck, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap, AlertCircle, BookOpen, Loader2, Lightbulb, Users } from 'lucide-react';
 import type { QuizAnswerResponse } from '@/types/book';
 import type { TodayQuizData } from '@/types/quiz';
 
@@ -17,9 +17,14 @@ const QUIZ_STORAGE_KEY = 'moneyrun_today_quiz';
 interface SavedQuiz {
   date: string;
   quizId: string;
+  quizCode?: string;
   question: string;
   choices: string[];
+  hint?: string | null;
   difficultyLevel: number;
+  difficultyLabel?: string;
+  totalAttempts?: number;
+  correctRate?: number;
   result: QuizAnswerResponse;
   scrapped: boolean;
 }
@@ -41,9 +46,14 @@ function saveQuiz(quiz: TodayQuizData, result: QuizAnswerResponse) {
   const data: SavedQuiz = {
     date: new Date().toISOString().slice(0, 10),
     quizId: quiz.id,
+    quizCode: quiz.quizCode,
     question: quiz.question,
     choices: quiz.choices,
+    hint: quiz.hint,
     difficultyLevel: quiz.difficultyLevel,
+    difficultyLabel: quiz.difficultyLabel,
+    totalAttempts: quiz.totalAttempts,
+    correctRate: quiz.correctRate,
     result,
     scrapped: false,
   };
@@ -80,6 +90,7 @@ export default function PacemakerPage() {
   const [savedQuiz, setSavedQuiz] = useState<SavedQuiz | null>(null);
   const [cardIndex, setCardIndex] = useState(0);
   const [swipeDir, setSwipeDir] = useState(0);
+  const [showHint, setShowHint] = useState(false);
 
   // 페이지 로드 시 sessionStorage에서 오늘 푼 퀴즈 복원
   useEffect(() => {
@@ -100,10 +111,11 @@ export default function PacemakerPage() {
 
   if (isLoading || quizLoading) {
     return (
-      <div className="fixed inset-0 z-[60] bg-background flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-3 border-border border-t-accent rounded-full animate-spin" />
-        <p className="text-sm font-medium text-foreground">퀴즈를 생성하고 있어요...</p>
-        <p className="text-xs text-sub">잠시만 기다려주세요</p>
+      <div className="space-y-4 animate-pulse" role="status" aria-label="로딩 중">
+        <div className="h-8 w-40 bg-surface rounded-full" />
+        <div className="h-32 bg-surface rounded-2xl" />
+        <div className="h-48 bg-surface rounded-2xl" />
+        <div className="h-24 bg-surface rounded-2xl" />
       </div>
     );
   }
@@ -126,9 +138,14 @@ export default function PacemakerPage() {
         setSavedQuiz({
           date: new Date().toISOString().slice(0, 10),
           quizId,
+          quizCode: quizSnapshot.quizCode,
           question: quizSnapshot.question,
           choices: quizSnapshot.choices,
+          hint: quizSnapshot.hint,
           difficultyLevel: quizSnapshot.difficultyLevel,
+          difficultyLabel: quizSnapshot.difficultyLabel,
+          totalAttempts: quizSnapshot.totalAttempts,
+          correctRate: quizSnapshot.correctRate,
           result,
           scrapped: false,
         });
@@ -152,7 +169,7 @@ export default function PacemakerPage() {
     const currentLevel = todayQuiz?.difficultyLevel ?? savedQuiz?.difficultyLevel ?? quizData?.currentLevel;
     if (currentLevel == null) return;
     const newLevel = direction === 'up'
-      ? Math.min(5, currentLevel + 1)
+      ? Math.min(3, currentLevel + 1)
       : Math.max(1, currentLevel - 1);
     updateLevel.mutate(newLevel, {
       onSuccess: () => {
@@ -348,9 +365,9 @@ export default function PacemakerPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {isQuizCard && (todayQuiz?.difficultyLevel || savedQuiz?.difficultyLevel) && (
+                {isQuizCard && (todayQuiz?.difficultyLabel || savedQuiz?.difficultyLabel) && (
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent">
-                    Lv.{todayQuiz?.difficultyLevel || savedQuiz?.difficultyLevel}
+                    {todayQuiz?.difficultyLabel || savedQuiz?.difficultyLabel}
                   </span>
                 )}
                 <span className="text-xs text-placeholder">{cardIndex + 1} / {totalCards}</span>
@@ -386,7 +403,39 @@ export default function PacemakerPage() {
                       {/* 미풀이: 인터랙티브 퀴즈 */}
                       {todayQuiz && !solvedToday && !quizResult && !savedQuiz ? (
                         <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            {todayQuiz.quizCode && (
+                              <span className="text-3xs text-placeholder font-mono">{todayQuiz.quizCode}</span>
+                            )}
+                            {todayQuiz.totalAttempts > 0 && (
+                              <span className="inline-flex items-center gap-1 text-3xs text-sub">
+                                <Users size={10} />
+                                {todayQuiz.totalAttempts}명 참여 · 정답률 {Math.round(todayQuiz.correctRate)}%
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm font-medium text-foreground mb-3">{todayQuiz.question}</p>
+                          {todayQuiz.hint && (
+                            <div className="mb-3">
+                              {!showHint ? (
+                                <button
+                                  onClick={() => setShowHint(true)}
+                                  className="inline-flex items-center gap-1 text-xs text-accent hover:opacity-80 transition-opacity"
+                                >
+                                  <Lightbulb size={12} />
+                                  힌트 보기
+                                </button>
+                              ) : (
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-2">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Lightbulb size={12} className="text-yellow-600 dark:text-yellow-400" />
+                                    <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-300">힌트</span>
+                                  </div>
+                                  <p className="text-xs text-yellow-800 dark:text-yellow-200">{todayQuiz.hint}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <div className="space-y-2 mb-3">
                             {todayQuiz.choices.map((choice, i) => (
                               <button
@@ -474,7 +523,7 @@ export default function PacemakerPage() {
                                   </button>
                                 )}
                               </div>
-                              {((isCorrect && qLevel != null && qLevel < 5) ||
+                              {((isCorrect && qLevel != null && qLevel < 3) ||
                                 (!isCorrect && qLevel != null && qLevel > 1)) && (
                                 <div className="mt-3 bg-accent/5 rounded-xl p-3 border border-accent/20">
                                   <p className="text-xs text-sub mb-2">

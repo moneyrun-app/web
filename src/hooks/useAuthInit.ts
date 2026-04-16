@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 import { useUserStore } from '@/store/userStore';
 import { useFinanceStore } from '@/store/financeStore';
@@ -47,12 +47,21 @@ export function useAuthInit(): AuthInitResult {
           api.setToken('');
         }
 
-        // 2. 카카오 토큰 → 백엔드 JWT 교환
+        // 2. 카카오 토큰 → 백엔드 JWT 교환 (+ 로그인 전 온보딩 데이터)
         const kakaoToken = session.accessToken;
+        let preOnboardingData: Record<string, unknown> | undefined;
+        try {
+          const raw = localStorage.getItem('preOnboarding');
+          if (raw) preOnboardingData = JSON.parse(raw);
+        } catch { /* ignore */ }
+
         const authRes = await fetch(`${API_URL}/auth/kakao`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accessToken: kakaoToken }),
+          body: JSON.stringify({
+            accessToken: kakaoToken,
+            ...(preOnboardingData ? { preOnboardingData } : {}),
+          }),
         });
 
         if (!authRes.ok) {
@@ -63,9 +72,21 @@ export function useAuthInit(): AuthInitResult {
         const { data } = await authRes.json();
         const backendJwt = data.accessToken;
 
-        // JWT 저장
+        // JWT 저장 + 로그인 전 온보딩 데이터 클리어
         api.setToken(backendJwt);
         sessionStorage.setItem(JWT_STORAGE_KEY, backendJwt);
+        if (preOnboardingData) {
+          localStorage.removeItem('preOnboarding');
+        }
+
+        // 신규 유저인데 preOnboarding 데이터 없이 로그인한 경우
+        // → 온보딩을 건너뛴 것이므로 로그아웃 후 온보딩으로 보냄
+        if (data.user.isNewUser && !preOnboardingData) {
+          api.clearToken();
+          sessionStorage.removeItem(JWT_STORAGE_KEY);
+          await signOut({ redirectTo: '/onboarding' });
+          return;
+        }
 
         // 유저 정보 동기화
         useUserStore.getState().setUser({
