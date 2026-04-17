@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${geistSans.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Script id="theme-init" strategy="beforeInteractive">{`try{if(localStorage.getItem('moneyrun_theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`}</Script>
         <SessionProvider>
           <QueryProvider>

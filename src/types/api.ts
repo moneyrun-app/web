@@ -49,7 +49,7 @@ export interface AdminUsersResponse {
 
 export interface AdminQuiz {
   id: string;
-  quizCode: string;
+  quizCode: number;
   question: string;
   choices: string[];
   correctAnswer: number;
@@ -58,8 +58,8 @@ export interface AdminQuiz {
   hint: string | null;
   difficultyLevel: number;
   difficultyLabel: string;         // "초급" | "심화" | "마스터"
-  source: string;
-  category: string;
+  source: '오답노트 복습' | null;
+  category: string | null;
   totalAttempts: number;
   correctCount: number;
   correctRate: number;             // 0~100

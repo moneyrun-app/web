@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAdminQuizzes } from '@/hooks/useApi';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { formatQuizCode } from '@/lib/format';
 
 export default function AdminQuizzesPage() {
   const { data, isLoading, error } = useAdminQuizzes();
@@ -49,9 +50,9 @@ export default function AdminQuizzesPage() {
               >
                 <div className="flex flex-col gap-0.5 shrink-0 mt-0.5">
                   <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-status-info-bg text-status-info-text">
-                    {quiz.category}
+                    {quiz.category ?? '일반'}
                   </span>
-                  <span className="text-3xs text-placeholder font-mono text-center">{quiz.quizCode}</span>
+                  <span className="text-3xs text-placeholder font-mono text-center">{formatQuizCode(quiz.quizCode)}</span>
                 </div>
                 <div className="flex-1">
                   <span className="text-sm">{quiz.question}</span>
@@ -115,7 +116,7 @@ export default function AdminQuizzesPage() {
                       </div>
                     )}
                     <div className="flex gap-4 text-xs text-sub mt-2">
-                      <span>출처: {quiz.source}</span>
+                      {quiz.source && <span>{quiz.source}</span>}
                       <span>난이도: {quiz.difficultyLabel}</span>
                       <span>{new Date(quiz.createdAt).toLocaleDateString('ko-KR')}</span>
                     </div>

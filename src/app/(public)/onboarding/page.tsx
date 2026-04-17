@@ -10,18 +10,20 @@ import { usePreOnboarding } from '@/hooks/useApi';
 import type { CourseCategory, PreOnboardingRequest } from '@/types/course';
 
 const CATEGORIES: { label: string; value: CourseCategory }[] = [
-  { label: '월급 관리가 안 돼요!', value: '소비_저축' },
+  { label: '월급 관리가 안 돼요!', value: '소비' },
+  { label: '종잣돈부터 차근차근 모으고 싶어요', value: '예적금' },
   { label: '주식 등으로 자산을 불리고 싶어요', value: '주식' },
   { label: '내 집 마련의 꿈을 이루고 싶어요', value: '부동산' },
-  { label: '세금과 환급금을 똑똑하게 챙기고 싶어요', value: '세금_연말정산' },
+  { label: '세금과 환급금을 똑똑하게 챙기고 싶어요', value: '세금' },
   { label: '미래의 나를 위해 연금을 준비할래요', value: '연금' },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  '소비_저축': '소비·저축',
+  '소비': '소비',
+  '예적금': '예적금',
   '주식': '주식',
   '부동산': '부동산',
-  '세금_연말정산': '세금·연말정산',
+  '세금': '세금',
   '연금': '연금',
 };
 

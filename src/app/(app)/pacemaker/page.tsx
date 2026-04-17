@@ -17,7 +17,7 @@ const QUIZ_STORAGE_KEY = 'moneyrun_today_quiz';
 interface SavedQuiz {
   date: string;
   quizId: string;
-  quizCode?: string;
+  quizCode?: number;
   question: string;
   choices: string[];
   hint?: string | null;
@@ -269,6 +269,7 @@ export default function PacemakerPage() {
   const quizCardIndex = aiCards.length; // AI 카드 뒤 (6번째)
   const isQuizCard = hasQuizCard && cardIndex === quizCardIndex;
   const aiCardIdx = cardIndex;
+  const pacemakerLoading = isLoading && aiCards.length === 0 && !data?.message;
 
   return (
     <div className="space-y-4">
@@ -349,11 +350,11 @@ export default function PacemakerPage() {
         )
       )}
 
-      {/* AI 카드 / 퀴즈 로딩 박스 — 둘 중 하나라도 로딩이면 placeholder */}
-      {(isLoading || quizLoading) && totalCards === 0 && (
+      {/* 페이스메이커 로딩 박스 — AI 카드가 아직 안 왔으면 placeholder (퀴즈 카드보다 우선) */}
+      {pacemakerLoading && (
         <div className="rounded-2xl border border-border shadow-sm bg-background min-h-[280px] flex flex-col items-center justify-center gap-3 px-5 py-8 text-center">
           <Loader2 size={28} className="text-accent animate-spin" />
-          <p className="text-sm font-bold text-foreground">오늘의 메시지를 준비하고 있어요</p>
+          <p className="text-sm font-bold text-foreground">페이스메이커를 불러오는 중입니다</p>
           <p className="text-xs text-sub leading-relaxed">
             AI 페이스메이커가 {data?.activeCourse?.title ?? '맞춤 코스'}에<br />
             맞춰 오늘의 문구를 만들고 있어요
@@ -362,7 +363,7 @@ export default function PacemakerPage() {
       )}
 
       {/* AI 카드 스와이프 */}
-      {totalCards > 0 ? (
+      {!pacemakerLoading && totalCards > 0 ? (
         <>
           {/* 카드 영역 */}
           <div className="relative overflow-hidden rounded-2xl border border-border shadow-sm bg-background">
@@ -421,8 +422,8 @@ export default function PacemakerPage() {
                       {todayQuiz && !solvedToday && !quizResult && !savedQuiz ? (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            {todayQuiz.quizCode && (
-                              <span className="text-3xs text-placeholder font-mono">{todayQuiz.quizCode}</span>
+                            {todayQuiz.source && (
+                              <span className="text-3xs px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">{todayQuiz.source}</span>
                             )}
                             {todayQuiz.totalAttempts > 0 && (
                               <span className="inline-flex items-center gap-1 text-3xs text-sub">
@@ -646,7 +647,7 @@ export default function PacemakerPage() {
             </blockquote>
           )}
         </>
-      ) : data?.message ? (
+      ) : !pacemakerLoading && data?.message ? (
         /* message 폴백 (cards가 아직 없을 때) */
         <div className="bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm space-y-3">
           {data.grade && (

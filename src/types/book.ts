@@ -5,12 +5,13 @@ import type { PacemakerActiveCourse } from './course';
 
 export interface TodayQuiz {
   id: string;
-  quizCode: string;
+  quizCode: number;
   question: string;
   choices: string[];
   hint: string | null;
   difficultyLevel: number;         // 1~3
   difficultyLabel: string;         // "초급" | "심화" | "마스터"
+  source: '오답노트 복습' | null;
   totalAttempts: number;
   correctCount: number;
   correctRate: number;             // 0~100
@@ -64,8 +65,9 @@ export interface WrongNote {
   correctAnswer: number;     // ⚠️ 1-indexed (DB 원본)
   briefExplanation: string;
   detailedExplanation: string;
-  source: string;
-  category: string;
+  source: '진단퀴즈' | '데일리';
+  category: string | null;
+  type: 'diagnostic' | 'daily';
   createdAt: string;
 }
 

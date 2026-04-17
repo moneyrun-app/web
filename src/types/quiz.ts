@@ -2,13 +2,13 @@
 
 export interface TodayQuizData {
   id: string;
-  quizCode: string;                // "Q00001"
+  quizCode: number;                // 자동 채번 (표시: formatQuizCode)
   question: string;
   choices: string[];
   hint: string | null;
   difficultyLevel: number;         // 1=초급, 2=심화, 3=마스터
   difficultyLabel: string;         // "초급" | "심화" | "마스터"
-  source: string;
+  source: '오답노트 복습' | null;   // null이면 배지 숨김
   category: string;
   totalAttempts: number;
   correctCount: number;

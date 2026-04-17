@@ -2,7 +2,7 @@ import type { Grade } from './finance';
 
 // === 코스 카테고리 ===
 
-export type CourseCategory = '연금' | '주식' | '부동산' | '세금_연말정산' | '소비_저축';
+export type CourseCategory = '예적금' | '연금' | '주식' | '부동산' | '세금' | '소비';
 export type CourseLevel = '기초' | '심화' | '마스터';
 export type MissionType = 'action' | 'read' | 'calculate';
 

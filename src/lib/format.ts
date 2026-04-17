@@ -45,6 +45,13 @@ export function formatWonRaw(amount: number): string {
 }
 
 /**
+ * 퀴즈 코드 표시 — 42 → "Q00042"
+ */
+export function formatQuizCode(code: number): string {
+  return `Q${String(code).padStart(5, '0')}`;
+}
+
+/**
  * HTML 엔티티 디코딩 (&quot; &amp; &lt; 등 → 실제 문자)
  */
 export function decodeHtml(html: string): string {

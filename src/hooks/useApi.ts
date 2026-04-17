@@ -519,6 +519,9 @@ export function useStartCourse() {
       qc.invalidateQueries({ queryKey: ['active-course'] });
       qc.invalidateQueries({ queryKey: ['available-courses'] });
       qc.invalidateQueries({ queryKey: ['my-book-overview'] });
+      // 코스 카테고리가 바뀌었으니 오늘의 퀴즈/페이스메이커도 새로 받기
+      qc.invalidateQueries({ queryKey: ['today-quiz'] });
+      qc.invalidateQueries({ queryKey: ['pacemaker-today'] });
     },
   });
 }
@@ -544,6 +547,9 @@ export function useCompleteCourse() {
       qc.invalidateQueries({ queryKey: ['active-course'] });
       qc.invalidateQueries({ queryKey: ['available-courses'] });
       qc.invalidateQueries({ queryKey: ['my-book-overview'] });
+      // 코스 완료 시 카테고리가 사라지므로 오늘의 퀴즈/페이스메이커도 초기화
+      qc.invalidateQueries({ queryKey: ['today-quiz'] });
+      qc.invalidateQueries({ queryKey: ['pacemaker-today'] });
     },
   });
 }

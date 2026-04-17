@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '@/store/userStore';
 import { useFinanceStore } from '@/store/financeStore';
 import {
@@ -10,6 +12,7 @@ import {
   useAttendanceHistory,
   usePacemakerToday,
   useActiveCourse,
+  useCourseGenerateStatus,
 } from '@/hooks/useApi';
 import GradeBadge from '@/components/common/GradeBadge';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -26,6 +29,7 @@ const levelCharacters: Record<number, { emoji: string; name: string }> = {
 
 export default function MyPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const userNickname = useUserStore((s) => s.nickname);
   const storeFinance = useFinanceStore();
   const { data: profile } = useFinanceProfile();
@@ -33,6 +37,15 @@ export default function MyPage() {
   const { data: streak } = useAttendanceStreak();
   const { data: pacemaker } = usePacemakerToday();
   const { data: activeCourse } = useActiveCourse();
+  const { data: genStatus } = useCourseGenerateStatus(activeCourse?.purchaseId ?? null);
+  const isCourseGenerating = genStatus?.status === 'generating';
+
+  useEffect(() => {
+    if (genStatus?.status === 'completed') {
+      queryClient.invalidateQueries({ queryKey: ['active-course'] });
+      queryClient.invalidateQueries({ queryKey: ['my-book-overview'] });
+    }
+  }, [genStatus?.status, queryClient]);
 
   const now = new Date();
   const [calMonth, setCalMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
@@ -196,28 +209,55 @@ export default function MyPage() {
 
       {/* 현재 코스 */}
       {activeCourse && (
-        <button
-          onClick={() => router.push('/course/missions')}
-          className="w-full text-left bg-background border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen size={16} className="text-accent" />
-            <span className="text-sm font-bold text-foreground">현재 코스</span>
+        isCourseGenerating ? (
+          <div className="bg-accent/5 border-2 border-accent/20 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 size={16} className="text-accent animate-spin" />
+              <span className="text-sm font-bold text-accent">{activeCourse.title}</span>
+            </div>
+            <motion.p
+              key={genStatus?.progress?.step}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-xs text-sub mb-2"
+            >
+              {genStatus?.progress?.step || '코스를 생성하고 있습니다...'}
+            </motion.p>
+            <div className="h-1.5 bg-accent/20 rounded-full overflow-hidden mb-1">
+              <motion.div
+                className="h-full bg-accent rounded-full"
+                animate={{ width: `${genStatus?.progress?.percent ?? 0}%` }}
+                transition={{ duration: 1 }}
+              />
+            </div>
+            {genStatus?.progress && (
+              <p className="text-3xs text-placeholder">{genStatus.progress.chaptersDone}/{genStatus.progress.totalChapters} 챕터</p>
+            )}
           </div>
-          <p className="text-sm font-medium text-foreground mb-2">{activeCourse.title}</p>
-          <div className="h-1.5 bg-border rounded-full overflow-hidden mb-2">
-            <div
-              className="h-full bg-accent rounded-full"
-              style={{ width: `${activeCourse.missionSummary.totalMissions > 0 ? (activeCourse.missionSummary.completedMissions / activeCourse.missionSummary.totalMissions) * 100 : 0}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-sub">
-              {activeCourse.currentChapter}/{activeCourse.totalChapters}장 · 미션 {activeCourse.missionSummary.completedMissions}/{activeCourse.missionSummary.totalMissions}개
-            </span>
-            <span className="text-xs font-medium text-accent">미션 보기 →</span>
-          </div>
-        </button>
+        ) : (
+          <button
+            onClick={() => router.push('/course/missions')}
+            className="w-full text-left bg-background border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen size={16} className="text-accent" />
+              <span className="text-sm font-bold text-foreground">현재 코스</span>
+            </div>
+            <p className="text-sm font-medium text-foreground mb-2">{activeCourse.title}</p>
+            <div className="h-1.5 bg-border rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-accent rounded-full"
+                style={{ width: `${activeCourse.missionSummary.totalMissions > 0 ? (activeCourse.missionSummary.completedMissions / activeCourse.missionSummary.totalMissions) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-sub">
+                {activeCourse.currentChapter}/{activeCourse.totalChapters}장 · 미션 {activeCourse.missionSummary.completedMissions}/{activeCourse.missionSummary.totalMissions}개
+              </span>
+              <span className="text-xs font-medium text-accent">미션 보기 →</span>
+            </div>
+          </button>
+        )
       )}
 
       {/* 내 정보 수정 — 편집 모드 (별도 카드) */}

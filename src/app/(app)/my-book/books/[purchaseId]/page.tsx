@@ -69,24 +69,7 @@ export default function BookReaderPage() {
   const highlights = chapter?.highlights ?? [];
   const highlightMap = new Map(highlights.map((hl) => [hl.sentenceText, hl]));
 
-  // 문단을 문장 단위 span으로 분리
-  const splitIntoSentences = useCallback(() => {
-    if (!contentRef.current) return;
-    const blocks = contentRef.current.querySelectorAll('p, li');
-    blocks.forEach(block => {
-      if (block.querySelector('[data-sentence]')) return;
-      const html = (block as HTMLElement).innerHTML.trim();
-      if (!html) return;
-      // 문장 끝 구두점(. ? ! 。) 뒤 공백 기준으로 분리
-      const sentences = html.split(/(?<=[.?!。])\s+/).filter(s => s.trim());
-      if (sentences.length === 0) return;
-      (block as HTMLElement).innerHTML = sentences
-        .map(s => `<span data-sentence>${s}</span>`)
-        .join(' ');
-    });
-  }, [chapter, activeChapter]);
-
-  // 렌더링 후 DOM에서 하이라이트 적용
+  // 하이라이트 스타일은 렌더링 후 imperative하게 적용 (style만 변경 — 구조 변경 없음 → 안전)
   const applyHighlights = useCallback(() => {
     if (!contentRef.current || !chapter) return;
     const spans = contentRef.current.querySelectorAll('[data-sentence]');
@@ -109,11 +92,10 @@ export default function BookReaderPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      splitIntoSentences();
       applyHighlights();
     }, 50);
     return () => clearTimeout(timer);
-  }, [splitIntoSentences, applyHighlights, activeChapter]);
+  }, [applyHighlights, activeChapter]);
 
   // --- early returns (모든 hooks 아래) ---
 
@@ -229,7 +211,7 @@ export default function BookReaderPage() {
           <div ref={contentRef} className="relative" onClick={handleContentClick}>
             {/* 콘텐츠 — 각 문장 클릭 가능 */}
             <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 leading-relaxed">
-              {chapter && <Markdown>{chapter.content}</Markdown>}
+              {chapter && <Markdown wrapSentences>{chapter.content}</Markdown>}
             </div>
 
             {/* 선택한 문장 → 스크랩 툴바 */}

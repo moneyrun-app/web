@@ -9,7 +9,7 @@ const tabs = [
   { href: '/pacemaker', icon: Activity, label: '페이스메이커' },
   { href: '/money-book', icon: Store, label: '머니북' },
   { href: '/my-book', icon: Library, label: '마이북' },
-  { href: '/my-page', icon: User, label: '마이' },
+  { href: '/my-page', icon: User, label: '마이페이지' },
 ];
 
 export default function BottomNav() {
