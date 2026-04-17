@@ -109,23 +109,10 @@ export default function PacemakerPage() {
     }
   }, [genStatus?.status, queryClient]);
 
-  if (isLoading || quizLoading) {
-    return (
-      <div className="space-y-4 animate-pulse" role="status" aria-label="로딩 중">
-        <div className="h-8 w-40 bg-surface rounded-full" />
-        <div className="h-32 bg-surface rounded-2xl" />
-        <div className="h-48 bg-surface rounded-2xl" />
-        <div className="h-24 bg-surface rounded-2xl" />
-      </div>
-    );
-  }
-
-  if (!data) return null;
-
   const todayQuiz = quizData?.quiz ?? null;
   const solvedToday = quizData?.solvedToday ?? false;
-  const attendance = data.attendance ?? { checkedToday: false, currentStreak: 0, totalDays: 0 };
-  const hasActiveCourse = !!data.activeCourse;
+  const attendance = data?.attendance ?? { checkedToday: false, currentStreak: 0, totalDays: 0 };
+  const hasActiveCourse = !!data?.activeCourse;
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null || !todayQuiz) return;
     const quizId = todayQuiz.id;
@@ -181,8 +168,8 @@ export default function PacemakerPage() {
 
 
 
-  /* ─── 코스 미선택 유저 ─── */
-  if (!hasActiveCourse) {
+  /* ─── 코스 미선택 유저 (data 로드 후에만) ─── */
+  if (!isLoading && data && !hasActiveCourse) {
     /* 마이북 생성 중이면 → 생성 진행 화면 */
     if (isGenerating) {
       const progress = genStatus?.progress;
@@ -276,7 +263,7 @@ export default function PacemakerPage() {
   }
 
   /* ─── 일반 페이스메이커 화면 ─── */
-  const aiCards = data.cards ?? [];
+  const aiCards = data?.cards ?? [];
   const hasQuizCard = !!todayQuiz || !!savedQuiz || solvedToday;
   const totalCards = aiCards.length + (hasQuizCard ? 1 : 0);
   const quizCardIndex = aiCards.length; // AI 카드 뒤 (6번째)
@@ -286,14 +273,32 @@ export default function PacemakerPage() {
   return (
     <div className="space-y-4">
       {/* 출석 현황 */}
-      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface text-xs">
-        <Flame size={14} className="text-orange-500" />
-        <span className="font-semibold">{attendance.currentStreak}일 연속</span>
-        <span className="text-sub">· 누적 {attendance.totalDays}일</span>
-      </div>
+      {data ? (
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface text-xs">
+          <Flame size={14} className="text-orange-500" />
+          <span className="font-semibold">{attendance.currentStreak}일 연속</span>
+          <span className="text-sub">· 누적 {attendance.totalDays}일</span>
+        </div>
+      ) : (
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface text-xs">
+          <Loader2 size={12} className="animate-spin text-sub" />
+          <span className="text-sub">출석 불러오는 중...</span>
+        </div>
+      )}
+
+      {/* 코스 진도 로딩 박스 */}
+      {isLoading && !data && (
+        <div className="w-full bg-surface border border-border rounded-2xl p-4 flex items-center gap-3">
+          <Loader2 size={16} className="text-accent animate-spin flex-shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-foreground">코스 불러오는 중</p>
+            <p className="text-xs text-sub mt-0.5">잠시만 기다려주세요</p>
+          </div>
+        </div>
+      )}
 
       {/* 코스 진도 / 마이북 생성 중 */}
-      {data.activeCourse && (
+      {data?.activeCourse && (
         isGenerating ? (
           <div className="w-full bg-accent/5 border-2 border-accent/20 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -344,6 +349,18 @@ export default function PacemakerPage() {
         )
       )}
 
+      {/* AI 카드 / 퀴즈 로딩 박스 — 둘 중 하나라도 로딩이면 placeholder */}
+      {(isLoading || quizLoading) && totalCards === 0 && (
+        <div className="rounded-2xl border border-border shadow-sm bg-background min-h-[280px] flex flex-col items-center justify-center gap-3 px-5 py-8 text-center">
+          <Loader2 size={28} className="text-accent animate-spin" />
+          <p className="text-sm font-bold text-foreground">오늘의 메시지를 준비하고 있어요</p>
+          <p className="text-xs text-sub leading-relaxed">
+            AI 페이스메이커가 {data?.activeCourse?.title ?? '맞춤 코스'}에<br />
+            맞춰 오늘의 문구를 만들고 있어요
+          </p>
+        </div>
+      )}
+
       {/* AI 카드 스와이프 */}
       {totalCards > 0 ? (
         <>
@@ -360,7 +377,7 @@ export default function PacemakerPage() {
                 ) : (
                   <>
                     {currentGrade && <GradeBadge grade={currentGrade} size="sm" />}
-                    {data.theme && <span className="text-xs text-sub">{data.theme}</span>}
+                    {data?.theme && <span className="text-xs text-sub">{data.theme}</span>}
                   </>
                 )}
               </div>
@@ -623,13 +640,13 @@ export default function PacemakerPage() {
           </div>
 
           {/* 명언 */}
-          {data.quote && (
+          {data?.quote && (
             <blockquote className="border-l-2 border-accent pl-3 text-xs text-sub italic">
               {data.quote}
             </blockquote>
           )}
         </>
-      ) : data.message ? (
+      ) : data?.message ? (
         /* message 폴백 (cards가 아직 없을 때) */
         <div className="bg-background border border-border rounded-2xl p-4 md:p-5 shadow-sm space-y-3">
           {data.grade && (

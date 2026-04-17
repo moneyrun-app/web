@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { formatWon } from '@/lib/format';
@@ -165,6 +166,22 @@ export default function PreOnboardingPage() {
                 className="mt-8 w-full h-12 bg-foreground text-background font-bold rounded-xl flex items-center justify-center gap-1 hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-30"
               >
                 다음 <ChevronRight size={16} />
+              </button>
+
+              {/* 기존 유저용 카카오 바로 로그인 */}
+              <div className="mt-6 flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-sub">이미 계정이 있나요?</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <button
+                onClick={() => signIn('kakao', { callbackUrl: '/pacemaker' })}
+                className="mt-4 w-full h-12 bg-[#FEE500] text-[#391B1B] font-semibold rounded-xl flex items-center justify-center gap-2 hover:bg-[#FDD835] active:scale-[0.98] transition-all"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M9 1C4.58 1 1 3.79 1 7.21c0 2.17 1.45 4.08 3.63 5.18l-.93 3.44c-.08.29.25.52.5.35l4.12-2.74c.22.02.44.03.68.03 4.42 0 8-2.79 8-6.26C17 3.79 13.42 1 9 1z" fill="currentColor"/>
+                </svg>
+                카카오로 로그인
               </button>
             </motion.div>
           )}
