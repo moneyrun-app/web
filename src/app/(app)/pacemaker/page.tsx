@@ -112,7 +112,6 @@ export default function PacemakerPage() {
   const todayQuiz = quizData?.quiz ?? null;
   const solvedToday = quizData?.solvedToday ?? false;
   const attendance = data?.attendance ?? { checkedToday: false, currentStreak: 0, totalDays: 0 };
-  const hasActiveCourse = !!data?.activeCourse;
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null || !todayQuiz) return;
     const quizId = todayQuiz.id;
@@ -169,7 +168,7 @@ export default function PacemakerPage() {
 
 
   /* ─── 코스 미선택 유저 (data 로드 후에만) ─── */
-  if (!isLoading && data && !hasActiveCourse) {
+  if (!isLoading && data && !data.activeCourse) {
     /* 마이북 생성 중이면 → 생성 진행 화면 */
     if (isGenerating) {
       const progress = genStatus?.progress;
@@ -269,7 +268,9 @@ export default function PacemakerPage() {
   const quizCardIndex = aiCards.length; // AI 카드 뒤 (6번째)
   const isQuizCard = hasQuizCard && cardIndex === quizCardIndex;
   const aiCardIdx = cardIndex;
-  const pacemakerLoading = isLoading && aiCards.length === 0 && !data?.message;
+  const pacemakerMessage: string | null | undefined = data ? data.message : undefined;
+  const pacemakerLoading = isLoading && aiCards.length === 0 && !pacemakerMessage;
+  const activeCourseTitle: string = data && data.activeCourse ? data.activeCourse.title : '맞춤 코스';
 
   return (
     <div className="space-y-4">
@@ -356,7 +357,7 @@ export default function PacemakerPage() {
           <Loader2 size={28} className="text-accent animate-spin" />
           <p className="text-sm font-bold text-foreground">페이스메이커를 불러오는 중입니다</p>
           <p className="text-xs text-sub leading-relaxed">
-            AI 페이스메이커가 {data?.activeCourse?.title ?? '맞춤 코스'}에<br />
+            AI 페이스메이커가 {activeCourseTitle}에<br />
             맞춰 오늘의 문구를 만들고 있어요
           </p>
         </div>
